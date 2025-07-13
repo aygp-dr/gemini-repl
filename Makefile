@@ -11,7 +11,7 @@ TLA_JAR := $(TOOLS_DIR)/tla2tools.jar
 ALLOY_JAR := $(TOOLS_DIR)/alloy.jar
 
 # Phony targets
-.PHONY: help all install verify run dev build clean test test-repl spec-check verify-alloy verify-tla
+.PHONY: help all install verify run dev build clean test test-repl spec-check verify-alloy verify-tla banner
 
 # Default target
 all: help
@@ -30,6 +30,7 @@ help:
 	@echo "  gmake build         - Build production version"
 	@echo "  gmake test          - Run tests"
 	@echo "  gmake test-repl     - Run interactive REPL tests"
+	@echo "  gmake banner        - Generate ASCII art banner"
 	@echo "  gmake clean         - Clean build artifacts"
 	@echo "  gmake dashboard     - Start tmux development dashboard"
 	@echo ""
@@ -141,6 +142,33 @@ test-repl: build
 		echo "Install expect to run interactive tests"; \
 		exit 1; \
 	fi
+
+# Generate ASCII art banner
+resources/:
+	mkdir -p resources
+
+resources/repl-banner.txt: resources/
+	@echo "Generating REPL banner..."
+	@if command -v toilet >/dev/null 2>&1; then \
+		toilet -f mono12 "Gemini REPL" > $@; \
+		echo "" >> $@; \
+		echo "  🤖 Self-Hosting ClojureScript REPL" >> $@; \
+		echo "  📝 Logging enabled via GEMINI_LOG_ENABLED" >> $@; \
+		echo "  🔍 Type /help for commands" >> $@; \
+		echo "" >> $@; \
+		echo "✅ Generated banner at $@"; \
+	else \
+		echo "Warning: toilet not found, creating simple banner"; \
+		echo "Gemini REPL" > $@; \
+		echo "==========" >> $@; \
+		echo "" >> $@; \
+		echo "🤖 Self-Hosting ClojureScript REPL" >> $@; \
+		echo "📝 Logging enabled via GEMINI_LOG_ENABLED" >> $@; \
+		echo "🔍 Type /help for commands" >> $@; \
+		echo "" >> $@; \
+	fi
+
+banner: resources/repl-banner.txt
 
 # Check specifications (alias for verify)
 spec-check: verify

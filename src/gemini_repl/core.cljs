@@ -102,6 +102,16 @@
                     (println (str "\n" result "\n")))
                   (.prompt rl)))))))
 
+(defn show-banner []
+  (if (.existsSync fs "resources/repl-banner.txt")
+    (let [banner (.readFileSync fs "resources/repl-banner.txt" "utf8")]
+      (print banner))
+    ;; Fallback to current banner
+    (do
+      (println "\n🤖 Gemini API REPL")
+      (println "================")
+      (println "Type /help for commands\n"))))
+
 (defn main []
   (let [api-key (get-env "GEMINI_API_KEY")]
     (if-not api-key
@@ -109,9 +119,7 @@
         (println "Error: GEMINI_API_KEY not set in environment")
         (.exit process 1))
       (let [rl (create-interface)]
-        (println "\n🤖 Gemini API REPL")
-        (println "================")
-        (println "Type /help for commands\n")
+        (show-banner)
         (.prompt rl)
         (.on rl "line"
              (fn [input]
