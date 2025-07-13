@@ -1,0 +1,8 @@
+# TLA+ project configuration
+SPECIFICATION interfaces
+INVARIANT TypeInvariant
+PROPERTY Liveness
+CONSTANTS
+  Commands = {"/help", "/exit", "/quit", "/clear", "/history"}
+  Prompts = {"Hello", "What is AI?", "Explain quantum computing"}
+  APIKey = "test-key"
