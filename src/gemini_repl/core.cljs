@@ -33,7 +33,7 @@
                     (.on res "data" #(swap! chunks conj %))
                     (.on res "end"
                          #(try
-                            (let [body (.parse js/JSON (.concat js/Buffer @chunks))
+                            (let [body (.parse js/JSON (.concat js/Buffer (clj->js @chunks)))
                                   text (-> body
                                            (aget "candidates")
                                            (aget 0)

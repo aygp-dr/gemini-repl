@@ -11,7 +11,7 @@ TLA_JAR := $(TOOLS_DIR)/tla2tools.jar
 ALLOY_JAR := $(TOOLS_DIR)/alloy.jar
 
 # Phony targets
-.PHONY: help all install verify run dev build clean test spec-check verify-alloy verify-tla
+.PHONY: help all install verify run dev build clean test test-repl spec-check verify-alloy verify-tla
 
 # Default target
 all: help
@@ -29,6 +29,7 @@ help:
 	@echo "  gmake dev           - Start development server"
 	@echo "  gmake build         - Build production version"
 	@echo "  gmake test          - Run tests"
+	@echo "  gmake test-repl     - Run interactive REPL tests"
 	@echo "  gmake clean         - Clean build artifacts"
 	@echo "  gmake dashboard     - Start tmux development dashboard"
 	@echo ""
@@ -118,12 +119,27 @@ build:
 	npm run build
 
 # Run tests
-test:
+test: test-repl
 	@echo "Running tests..."
 	@if [ -f package.json ] && grep -q "test" package.json; then \
 		npm test; \
 	else \
 		echo "No tests configured"; \
+	fi
+
+# Run interactive REPL tests using expect
+test-repl: build
+	@echo "Running REPL interactive tests..."
+	@if [ ! -f .env ] || ! grep -q GEMINI_API_KEY .env; then \
+		echo "⚠️  Warning: GEMINI_API_KEY not found in .env file"; \
+		echo "   Some tests may be skipped"; \
+	fi
+	@if command -v expect >/dev/null 2>&1; then \
+		./scripts/test-repl.exp; \
+	else \
+		echo "Error: 'expect' command not found"; \
+		echo "Install expect to run interactive tests"; \
+		exit 1; \
 	fi
 
 # Check specifications (alias for verify)

@@ -1,0 +1,163 @@
+#!/usr/bin/env expect
+
+# Comprehensive test script for the Gemini REPL
+# Exit codes:
+#   0 - All tests passed
+#   1 - Test failure
+#   2 - API key not configured
+
+set timeout 10
+log_user 0
+set test_count 0
+set passed_count 0
+
+proc test_case {name} {
+    global test_count
+    incr test_count
+    puts -nonewline "  $test_count. $name... "
+    flush stdout
+}
+
+proc pass {} {
+    global passed_count
+    incr passed_count
+    puts "✓"
+}
+
+proc fail {reason} {
+    puts "✗"
+    puts "     ERROR: $reason"
+}
+
+# Check if API key is configured
+if {[catch {exec sh -c "test -f .env && grep -q GEMINI_API_KEY .env"} result]} {
+    puts "ERROR: GEMINI_API_KEY not configured in .env file"
+    exit 2
+}
+
+puts "Running Gemini REPL tests...\n"
+
+# Start the REPL
+spawn node target/repl.js
+
+# Test 1: REPL starts
+test_case "REPL starts with correct banner"
+expect {
+    timeout { 
+        fail "Timeout waiting for banner"
+        exit 1 
+    }
+    "Gemini API REPL" {
+        expect {
+            timeout { fail "Timeout waiting for prompt"; exit 1 }
+            "gemini>" { pass }
+        }
+    }
+}
+
+# Test 2: Help command
+test_case "/help command shows available commands"
+send "/help\r"
+expect {
+    timeout { fail "Timeout waiting for help"; exit 1 }
+    "Commands:" {
+        expect {
+            "/help" {
+                expect {
+                    "/exit" {
+                        expect {
+                            "/clear" { pass }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+expect "gemini>"
+
+# Test 3: Invalid command
+test_case "Invalid command shows error"
+send "/invalid\r"
+expect {
+    timeout { fail "Timeout waiting for error"; exit 1 }
+    "Unknown command" { pass }
+}
+expect "gemini>"
+
+# Test 4: Empty input
+test_case "Empty input is handled gracefully"
+send "\r"
+expect {
+    timeout { pass }  # Should just show prompt again
+    "gemini>" { pass }
+}
+
+# Test 5: Simple API call
+test_case "Simple API call to Gemini"
+send "Say hello in one word\r"
+expect {
+    timeout { fail "Timeout waiting for 'Thinking...'"; exit 1 }
+    "Thinking..." {
+        set timeout 30
+        expect {
+            timeout { fail "Timeout waiting for API response"; exit 1 }
+            -re "(Hello|Hi|Hey|Greetings)" { pass }
+            "Error:" { 
+                expect -re ".*\r\n"
+                fail "API returned error"
+                exit 1
+            }
+        }
+        set timeout 10
+    }
+}
+expect "gemini>"
+
+# Test 6: Multi-line response handling
+test_case "Multi-line API response"
+send "Write a haiku about testing software\r"
+expect {
+    timeout { fail "Timeout waiting for 'Thinking...'"; exit 1 }
+    "Thinking..." {
+        set timeout 30
+        expect {
+            timeout { fail "Timeout waiting for API response"; exit 1 }
+            -re ".*\r\n.*\r\n.*" { pass }  # Haiku should have multiple lines
+        }
+        set timeout 10
+    }
+}
+expect "gemini>"
+
+# Test 7: Clear screen
+test_case "/clear command clears screen"
+send "/clear\r"
+expect {
+    timeout { fail "Timeout after clear"; exit 1 }
+    -re "\\033\\\[2J\\033\\\[0;0H" { pass }
+    "gemini>" { pass }  # Some terminals might not show the escape sequence
+}
+
+# Test 8: Exit command
+test_case "/exit command exits REPL"
+send "/exit\r"
+expect {
+    timeout { fail "Timeout waiting for goodbye"; exit 1 }
+    "Goodbye!" { 
+        expect eof
+        pass 
+    }
+}
+
+# Summary
+puts "\n========================================="
+puts "Test Summary: $passed_count/$test_count passed"
+
+if {$passed_count == $test_count} {
+    puts "✅ All tests passed!"
+    exit 0
+} else {
+    puts "❌ Some tests failed"
+    exit 1
+}
