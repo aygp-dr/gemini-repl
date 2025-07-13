@@ -11,7 +11,7 @@ TLA_JAR := $(TOOLS_DIR)/tla2tools.jar
 ALLOY_JAR := $(TOOLS_DIR)/alloy.jar
 
 # Phony targets
-.PHONY: help all install verify run dev build clean test test-repl spec-check verify-alloy verify-tla banner
+.PHONY: help all install verify run dev build clean test test-repl spec-check verify-alloy verify-tla banner lint lint-cljs lint-shell install-lint-tools check-lint-tools
 
 # Default target
 all: help
@@ -26,11 +26,14 @@ help:
 	@echo "  gmake verify-tla    - Verify TLA+ specifications"
 	@echo "  gmake verify-alloy  - Verify Alloy specifications"
 	@echo "  gmake run           - Run the REPL"
-	@echo "  gmake dev           - Start development server"
+	@echo "  gmake dev           - Start development server with live reload"
 	@echo "  gmake build         - Build production version"
 	@echo "  gmake test          - Run tests"
 	@echo "  gmake test-repl     - Run interactive REPL tests"
 	@echo "  gmake banner        - Generate ASCII art banner"
+	@echo "  gmake lint          - Run all linting (ClojureScript + shell)"
+	@echo "  gmake lint-cljs     - Lint ClojureScript files"
+	@echo "  gmake lint-shell    - Lint shell scripts"
 	@echo "  gmake clean         - Clean build artifacts"
 	@echo "  gmake dashboard     - Start tmux development dashboard"
 	@echo ""
@@ -111,9 +114,15 @@ dashboard:
 dashboard-restart:
 	./scripts/tmux-dashboard.sh --restart
 
-# Development mode
-dev:
-	npm run dev
+# Development mode with live reload
+dev: install
+	@echo "🚀 Starting development mode with live reload..."
+	@if ! command -v nodemon >/dev/null 2>&1; then \
+		echo "📦 Installing nodemon..."; \
+		npm install -g nodemon; \
+	fi
+	@echo "🔄 Starting REPL with auto-restart on file changes..."
+	@GEMINI_LOG_ENABLED=true nodemon --watch src/ --watch target/ --ext cljs,js target/repl.js
 
 # Build production version
 build:
@@ -169,6 +178,51 @@ resources/repl-banner.txt: resources/
 	fi
 
 banner: resources/repl-banner.txt
+
+# Main lint target
+lint: lint-cljs lint-shell
+	@echo "✅ All linting completed"
+
+# ClojureScript linting
+lint-cljs:
+	@echo "=== Linting ClojureScript files ==="
+	@if command -v clj-kondo >/dev/null 2>&1; then \
+		clj-kondo --lint src/ test/ --config '{:output {:format :text}}' || exit 1; \
+	else \
+		echo "Warning: clj-kondo not found. Install: npm install -g @clj-kondo/clj-kondo"; \
+		exit 1; \
+	fi
+
+# Shell script linting
+lint-shell:
+	@echo "=== Linting shell scripts ==="
+	@if command -v shellcheck >/dev/null 2>&1; then \
+		find scripts/ -name "*.sh" -exec shellcheck {} \; || exit 1; \
+	else \
+		echo "Warning: shellcheck not found. Install: pkg install shellcheck"; \
+		exit 1; \
+	fi
+
+# Install linting tools
+install-lint-tools:
+	@echo "Installing linting tools..."
+	@if command -v npm >/dev/null 2>&1; then \
+		npm install -g @clj-kondo/clj-kondo; \
+	fi
+	@if command -v pkg >/dev/null 2>&1; then \
+		pkg install shellcheck; \
+	elif command -v apt >/dev/null 2>&1; then \
+		apt install shellcheck; \
+	elif command -v brew >/dev/null 2>&1; then \
+		brew install shellcheck; \
+	fi
+	@echo "✅ Linting tools installed"
+
+# Check if tools are available
+check-lint-tools:
+	@echo "Checking linting tools..."
+	@command -v clj-kondo >/dev/null 2>&1 && echo "✅ clj-kondo available" || echo "❌ clj-kondo missing"
+	@command -v shellcheck >/dev/null 2>&1 && echo "✅ shellcheck available" || echo "❌ shellcheck missing"
 
 # Check specifications (alias for verify)
 spec-check: verify
