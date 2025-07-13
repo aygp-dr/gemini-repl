@@ -1,0 +1,15 @@
+{:source-paths ["src"]
+ :dependencies [[org.clojure/clojurescript "1.11.60"]
+                [org.clojure/core.async "1.6.673"]]
+ :builds
+ {:repl
+  {:target :node-script
+   :output-to "target/repl.js"
+   :main gemini-repl.core/main
+   :devtools {:repl-init-ns gemini-repl.core}}
+  
+  :release
+  {:target :node-script
+   :output-to "dist/gemini-repl.js"
+   :main gemini-repl.core/main
+   :compiler-options {:optimizations :advanced}}}}

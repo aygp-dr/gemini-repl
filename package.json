@@ -1,0 +1,22 @@
+{
+  "name": "gemini-repl",
+  "version": "0.1.0",
+  "description": "Interactive Gemini API REPL",
+  "main": "dist/gemini-repl.js",
+  "scripts": {
+    "dev": "shadow-cljs watch repl",
+    "repl": "shadow-cljs cljs-repl repl",
+    "build": "shadow-cljs release repl",
+    "run": "node target/repl.js",
+    "clean": "rm -rf target dist .shadow-cljs"
+  },
+  "keywords": ["gemini", "repl", "clojurescript"],
+  "author": "jwalsh",
+  "license": "MIT",
+  "devDependencies": {
+    "shadow-cljs": "^2.25.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}
