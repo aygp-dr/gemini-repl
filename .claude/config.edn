@@ -1,0 +1,14 @@
+{:project "gemini-repl"
+ :type "self-hosting-repl"
+ :language "clojurescript"
+ :formal-methods {:tla+ true
+                  :alloy true}
+ :commands {:enabled true
+            :custom-dir ".claude/commands"}
+ :workflows {:mise-en-place true
+             :change-requests true
+             :experiments true
+             :research true}
+ :capabilities {:tool-calling :planned
+                :self-modification :planned
+                :file-operations :planned}}
