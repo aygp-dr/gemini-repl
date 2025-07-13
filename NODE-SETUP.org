@@ -1,0 +1,259 @@
+#+TITLE: Node.js and ClojureScript Setup
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-13
+#+PROPERTY: header-args:shell :results output :mkdirp yes
+
+* Environment Check
+
+#+begin_src shell
+echo "=== Development Environment ==="
+echo "Node.js: $(node --version)"
+echo "npm: $(npm --version)"
+echo "npx: $(npx --version)"
+echo "Java: $(java -version 2>&1 | head -1)"
+echo "Clojure: $(clojure --version 2>&1)"
+#+end_src
+
+* ClojureScript Tools
+
+** Install Shadow-CLJS (Recommended for Node.js targets)
+
+#+begin_src shell
+npm init -y
+npm install --save-dev shadow-cljs
+echo "Shadow-CLJS installed locally"
+#+end_src
+
+** Alternative: Install Lumo (Standalone ClojureScript)
+
+#+begin_src shell
+npm install -g lumo-cljs
+echo "Lumo installed globally"
+#+end_src
+
+* Project Configuration
+
+** Shadow-CLJS Configuration
+
+#+begin_src clojure :tangle shadow-cljs.edn :mkdirp t
+{:source-paths ["src"]
+ :dependencies [[org.clojure/clojurescript "1.11.60"]
+                [org.clojure/core.async "1.6.673"]]
+ :builds
+ {:repl
+  {:target :node-script
+   :output-to "target/repl.js"
+   :main gemini-repl.core/main
+   :devtools {:repl-init-ns gemini-repl.core}}
+  
+  :release
+  {:target :node-script
+   :output-to "dist/gemini-repl.js"
+   :main gemini-repl.core/main
+   :compiler-options {:optimizations :advanced}}}}
+#+end_src
+
+** Package.json Scripts
+
+#+begin_src json :tangle package.json :mkdirp t
+{
+  "name": "gemini-repl",
+  "version": "0.1.0",
+  "description": "Interactive Gemini API REPL",
+  "main": "dist/gemini-repl.js",
+  "scripts": {
+    "dev": "shadow-cljs watch repl",
+    "repl": "shadow-cljs cljs-repl repl",
+    "build": "shadow-cljs release repl",
+    "run": "node target/repl.js",
+    "clean": "rm -rf target dist .shadow-cljs"
+  },
+  "keywords": ["gemini", "repl", "clojurescript"],
+  "author": "jwalsh",
+  "license": "MIT",
+  "devDependencies": {
+    "shadow-cljs": "^2.25.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}
+#+end_src
+
+** Simple ClojureScript Implementation
+
+#+begin_src clojure :tangle src/gemini_repl/core.cljs :mkdirp t
+(ns gemini-repl.core
+  (:require ["readline" :as readline]
+            ["https" :as https]
+            ["process" :as process]
+            ["dotenv" :as dotenv]
+            [clojure.string :as str]))
+
+;; Load environment variables
+(.config dotenv)
+
+(defn get-env [key]
+  (aget (.-env process) key))
+
+(defn create-interface []
+  (.createInterface readline
+    #js {:input (.-stdin process)
+         :output (.-stdout process)
+         :prompt "gemini> "}))
+
+(defn make-request [api-key prompt callback]
+  (let [data (.stringify js/JSON
+               #js {:contents #js [#js {:parts #js [#js {:text prompt}]}]})
+        options #js {:hostname "generativelanguage.googleapis.com"
+                     :port 443
+                     :path "/v1beta/models/gemini-2.0-flash:generateContent"
+                     :method "POST"
+                     :headers #js {"x-goog-api-key" api-key
+                                   "Content-Type" "application/json"
+                                   "Content-Length" (.-length data)}}]
+    (let [req (.request https options
+                (fn [res]
+                  (let [chunks (atom [])]
+                    (.on res "data" #(swap! chunks conj %))
+                    (.on res "end"
+                         #(try
+                            (let [body (.parse js/JSON (.concat js/Buffer @chunks))
+                                  text (-> body
+                                           (aget "candidates")
+                                           (aget 0)
+                                           (aget "content")
+                                           (aget "parts")
+                                           (aget 0)
+                                           (aget "text"))]
+                              (callback nil text))
+                            (catch js/Error e
+                              (callback e nil)))))))]
+      (.on req "error" #(callback % nil))
+      (.write req data)
+      (.end req))))
+
+(defn handle-command [cmd rl]
+  (case cmd
+    "/help" (do
+              (println "\nCommands:")
+              (println "  /help   - Show this help")
+              (println "  /exit   - Exit the REPL")
+              (println "  /clear  - Clear the screen")
+              (println "\nOr type any text to send to Gemini\n"))
+    "/exit" (do
+              (println "Goodbye!")
+              (.close rl)
+              (.exit process 0))
+    "/clear" (.write (.-stdout process) "\u001b[2J\u001b[0;0H")
+    (println (str "Unknown command: " cmd "\nType /help for commands"))))
+
+(defn handle-input [rl api-key input]
+  (let [trimmed (.trim input)]
+    (cond
+      (empty? trimmed) nil
+      (str/starts-with? trimmed "/") (handle-command trimmed rl)
+      :else (do
+              (println "\nThinking...")
+              (make-request api-key trimmed
+                (fn [err result]
+                  (if err
+                    (println "Error:" (.-message err))
+                    (println (str "\n" result "\n")))
+                  (.prompt rl)))))))
+
+(defn main []
+  (let [api-key (get-env "GEMINI_API_KEY")]
+    (if-not api-key
+      (do
+        (println "Error: GEMINI_API_KEY not set in environment")
+        (.exit process 1))
+      (let [rl (create-interface)]
+        (println "\n🤖 Gemini API REPL")
+        (println "================")
+        (println "Type /help for commands\n")
+        (.prompt rl)
+        (.on rl "line"
+             (fn [input]
+               (handle-input rl api-key input)
+               (when-not (#{"/exit"} (.trim input))
+                 (.prompt rl))))))))
+
+(defn ^:export -main [& args]
+  (main))
+#+end_src
+
+* Development Workflow
+
+** Start Development REPL
+
+#+begin_src shell :tangle scripts/dev.sh :shebang #!/bin/sh :mkdirp t
+#!/bin/sh
+echo "Starting Shadow-CLJS development server..."
+npx shadow-cljs watch repl
+#+end_src
+
+** Build for Production
+
+#+begin_src shell :tangle scripts/build.sh :shebang #!/bin/sh :mkdirp t
+#!/bin/sh
+echo "Building optimized version..."
+npx shadow-cljs release repl
+echo "Build complete: dist/gemini-repl.js"
+ls -lh dist/
+#+end_src
+
+** Run the REPL
+
+#+begin_src shell :tangle scripts/run.sh :shebang #!/bin/sh :mkdirp t
+#!/bin/sh
+if [ ! -f ".env" ]; then
+    echo "Error: .env file not found"
+    echo "Copy .env.example to .env and add your API key"
+    exit 1
+fi
+
+if [ -f "target/repl.js" ]; then
+    node target/repl.js
+else
+    echo "Building first..."
+    npx shadow-cljs compile repl
+    node target/repl.js
+fi
+#+end_src
+
+#+begin_src shell
+chmod +x scripts/*.sh
+#+end_src
+
+* Quick Start
+
+#+begin_src shell :results output
+# Install dependencies
+npm install
+
+# Copy environment file
+cp .env.example .env
+# Edit .env and add your GEMINI_API_KEY
+
+# Run in development mode
+npm run dev
+
+# In another terminal, run the REPL
+npm run run
+#+end_src
+
+* Alternative: Direct Execution with Lumo
+
+For quick testing without build tools:
+
+#+begin_src shell :tangle run-with-lumo.sh :shebang #!/bin/sh
+#!/bin/sh
+# Run directly with Lumo (if installed)
+if command -v lumo >/dev/null 2>&1; then
+    lumo src/gemini_repl/core.cljs
+else
+    echo "Lumo not installed. Install with: npm install -g lumo-cljs"
+    exit 1
+fi
+#+end_src
