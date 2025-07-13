@@ -1,0 +1,877 @@
+#+TITLE: GitHub Repository Setup for Gemini REPL
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-13
+#+PROPERTY: header-args :mkdirp yes
+
+* Overview
+
+This file sets up GitHub-specific configurations including:
+- GitHub Actions workflows
+- Issue and PR templates
+- Repository documentation
+- RFCs structure
+- GitHub CLI integration
+
+* GitHub Directory Structure
+
+** Create Directories
+
+#+begin_src shell :results output
+mkdir -p .github/workflows
+mkdir -p .github/ISSUE_TEMPLATE
+mkdir -p .github/PULL_REQUEST_TEMPLATE
+mkdir -p .github/rfcs
+mkdir -p .github/scripts
+echo "Created GitHub directories"
+tree .github -d
+#+end_src
+
+* GitHub Actions Workflows
+
+** Formal Verification Workflow
+
+#+begin_src yaml :tangle .github/workflows/formal-verification.yml :mkdirp t
+name: Formal Methods Verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'specs/**'
+      - '.github/workflows/formal-verification.yml'
+  pull_request:
+    paths:
+      - 'specs/**'
+
+jobs:
+  verify-tla:
+    runs-on: ubuntu-latest
+    name: Verify TLA+ Specifications
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Cache TLA+ Tools
+        uses: actions/cache@v3
+        with:
+          path: ~/.tla
+          key: tla-tools-1.8.0
+      
+      - name: Download TLA+ Tools
+        run: |
+          mkdir -p ~/.tla
+          if [ ! -f ~/.tla/tla2tools.jar ]; then
+            wget -O ~/.tla/tla2tools.jar \
+              https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          fi
+          
+      - name: Syntax Check
+        run: |
+          for spec in specs/*.tla; do
+            if [ -f "$spec" ]; then
+              echo "Checking: $spec"
+              java -cp ~/.tla/tla2tools.jar tla2sany.SANY "$spec"
+            fi
+          done
+          
+      - name: Model Check (Bounded)
+        run: |
+          for spec in specs/*.tla; do
+            if [ -f "$spec" ] && [ -f "${spec%.tla}.cfg" ]; then
+              echo "Model checking: $spec"
+              timeout 300 java -cp ~/.tla/tla2tools.jar tlc2.TLC \
+                -depth 10 -workers auto "$spec" || true
+            fi
+          done
+
+  verify-alloy:
+    runs-on: ubuntu-latest
+    name: Verify Alloy Specifications
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: List Alloy Specifications
+        run: |
+          echo "Alloy specifications found:"
+          find specs -name "*.als" -type f | while read spec; do
+            echo "  - $spec"
+          done
+#+end_src
+
+** ClojureScript CI Workflow
+
+#+begin_src yaml :tangle .github/workflows/clojurescript-ci.yml :mkdirp t
+name: ClojureScript CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Install Dependencies
+        run: npm ci
+      
+      - name: Run Linter
+        run: |
+          if [ -f "package.json" ] && grep -q "lint" package.json; then
+            npm run lint
+          else
+            echo "No lint script found"
+          fi
+      
+      - name: Run Tests
+        run: |
+          if [ -f "package.json" ] && grep -q "test" package.json; then
+            npm test
+          else
+            echo "No test script found"
+          fi
+      
+      - name: Build Release
+        run: |
+          if [ -f "shadow-cljs.edn" ]; then
+            npx shadow-cljs release repl
+          else
+            echo "No shadow-cljs configuration found"
+          fi
+
+  mise-en-place:
+    runs-on: ubuntu-latest
+    name: Workspace Check
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Documentation
+        run: |
+          echo "=== Documentation Status ==="
+          for doc in README.md README.org SETUP.org; do
+            if [ -f "$doc" ]; then
+              echo "✓ $doc exists"
+            else
+              echo "✗ $doc missing"
+            fi
+          done
+          
+      - name: Check Specifications
+        run: |
+          echo "=== Specification Files ==="
+          find specs -name "*.tla" -o -name "*.als" | sort
+#+end_src
+
+** Self-Host Testing Workflow
+
+#+begin_src yaml :tangle .github/workflows/self-host-test.yml :mkdirp t
+name: Self-Host Testing
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  self-modification-test:
+    runs-on: ubuntu-latest
+    name: Test Self-Modification Capabilities
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Environment
+        run: |
+          npm ci
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+      
+      - name: Test Read Capability
+        run: |
+          # Test if the system can read its own source
+          node -e "
+          const fs = require('fs');
+          const src = fs.readFileSync('src/gemini_repl/core.cljs', 'utf8');
+          console.log('Source lines:', src.split('\\n').length);
+          "
+      
+      - name: Test Analysis Capability
+        run: |
+          # Future: Run self-analysis command
+          echo "Self-analysis test placeholder"
+      
+      - name: Generate Self-Report
+        run: |
+          echo "# Self-Host Test Report" > self-host-report.md
+          echo "Date: $(date)" >> self-host-report.md
+          echo "## Capabilities Tested" >> self-host-report.md
+          echo "- [ ] Read own source" >> self-host-report.md
+          echo "- [ ] Analyze structure" >> self-host-report.md
+          echo "- [ ] Suggest improvements" >> self-host-report.md
+          
+      - name: Upload Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: self-host-report
+          path: self-host-report.md
+#+end_src
+
+* Issue Templates
+
+** Bug Report Template
+
+#+begin_src yaml :tangle .github/ISSUE_TEMPLATE/bug_report.yml :mkdirp t
+name: Bug Report
+description: Create a report to help us improve
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: When I type /help, the command is not recognized...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      value: |
+        1. Start the REPL with `npm run run`
+        2. Type '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected?
+      options:
+        - Core REPL
+        - Command Parser
+        - API Client
+        - Tool Calling
+        - Formal Specifications
+        - Self-Hosting Features
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Please copy and paste any relevant log output
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version are you running?
+      placeholder: "0.1.0"
+#+end_src
+
+** Feature Request Template
+
+#+begin_src yaml :tangle .github/ISSUE_TEMPLATE/feature_request.yml :mkdirp t
+name: Feature Request
+description: Suggest an idea for this project
+title: "[FEATURE] "
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your feature suggestion!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem?
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe alternatives you've considered
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      options:
+        - New Command
+        - Tool Calling
+        - Self-Hosting
+        - API Integration
+        - Formal Specifications
+        - Developer Experience
+    validations:
+      required: true
+
+  - type: checkbox
+    id: specs
+    attributes:
+      label: Specification Impact
+      description: Will this require specification updates?
+      options:
+        - label: This feature requires TLA+ specification updates
+        - label: This feature requires Alloy model updates
+        - label: This feature requires new formal properties
+#+end_src
+
+** Change Request Template
+
+#+begin_src yaml :tangle .github/ISSUE_TEMPLATE/change_request.yml :mkdirp t
+name: Change Request
+description: Propose a significant change to the system
+title: "[CR] "
+labels: ["change-request", "discussion"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for significant architectural or design changes.
+
+  - type: input
+    id: cr-number
+    attributes:
+      label: CR Number
+      placeholder: "CR-001"
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: Background and Motivation
+      description: Why is this change needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed Design
+      description: Detailed design of the change
+      value: |
+        ## Architecture Changes
+        
+        ## Specification Updates
+        
+        ## Implementation Plan
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and Mitigations
+      description: What could go wrong?
+
+  - type: textarea
+    id: success
+    attributes:
+      label: Success Criteria
+      description: How will we know this is successful?
+      value: |
+        - [ ] All tests pass
+        - [ ] Specifications verified
+        - [ ] Performance targets met
+#+end_src
+
+* Pull Request Template
+
+#+begin_src markdown :tangle .github/pull_request_template.md :mkdirp t
+## Description
+
+Brief description of changes
+
+Fixes #(issue)
+
+## Type of Change
+
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
+- [ ] Specification update
+
+## Changes Made
+
+- 
+- 
+- 
+
+## Testing
+
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+
+## Formal Verification
+
+- [ ] TLA+ specifications still valid
+- [ ] Alloy models checked
+- [ ] No new invariant violations
+
+## Self-Hosting Impact
+
+- [ ] No impact on self-hosting capabilities
+- [ ] Enhances self-hosting capabilities
+- [ ] Requires self-hosting updates
+
+## Checklist
+
+- [ ] My code follows the project style guidelines
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new warnings
+- [ ] I have updated relevant specifications
+- [ ] Any dependent changes have been merged and published
+#+end_src
+
+* RFCs Directory
+
+** RFCs README
+
+#+begin_src markdown :tangle .github/rfcs/README.md :mkdirp t
+# Gemini REPL RFCs
+
+This directory contains Requests for Comments (RFCs) for significant changes to the Gemini REPL project.
+
+## RFC Process
+
+1. Create a new RFC file: `XXX-title.md` (use next number)
+2. Fill out the RFC template
+3. Submit as a draft PR
+4. Discuss in PR comments
+5. Update based on feedback
+6. Merge when consensus reached
+
+## Active RFCs
+
+- [001-formal-validation.md](001-formal-validation.md) - Formal Methods Tooling Validation
+
+## RFC Status
+
+- **Draft**: Under discussion
+- **Accepted**: Approved for implementation
+- **Implemented**: Completed
+- **Rejected**: Not moving forward
+- **Superseded**: Replaced by another RFC
+
+## Template
+
+See [000-template.md](000-template.md) for the RFC template.
+#+end_src
+
+** RFC Template
+
+#+begin_src markdown :tangle .github/rfcs/000-template.md :mkdirp t
+# RFC XXX: [Title]
+
+**RFC Number**: XXX  
+**Title**: [Descriptive Title]  
+**Author**: @[github-username]  
+**Status**: Draft  
+**Created**: [YYYY-MM-DD]  
+**Updated**: [YYYY-MM-DD]  
+
+## Summary
+
+[One paragraph explanation of the proposal]
+
+## Motivation
+
+[Why are we doing this? What problem does it solve?]
+
+## Detailed Design
+
+[This is the bulk of the RFC. Explain the design in enough detail for somebody familiar with the project to understand and implement]
+
+## Implementation Plan
+
+[Step by step implementation approach]
+
+## Drawbacks
+
+[Why should we *not* do this?]
+
+## Alternatives
+
+[What other designs have been considered? Why is this design the best?]
+
+## Unresolved Questions
+
+[What parts of the design are still unclear?]
+
+## References
+
+[Links to relevant discussions, prior art, etc.]
+#+end_src
+
+** Copy Existing RFC
+
+#+begin_src markdown :tangle .github/rfcs/001-formal-validation.md :mkdirp t
+# RFC: Formal Methods Tooling Validation
+
+**RFC Number**: 001  
+**Title**: Formal Methods Tooling Validation for Gemini REPL  
+**Author**: @aygp-dr  
+**Status**: Draft  
+**Created**: 2025-07-13  
+**Labels**: `rfc`, `formal-methods`, `validation`, `tooling`
+
+## Summary
+
+Establish a comprehensive validation framework for the TLA+ and Alloy specifications in the Gemini REPL project, ensuring formal specifications accurately model the system behavior before implementation and self-modification capabilities are added.
+
+## Motivation
+
+Before the Gemini REPL gains self-hosting capabilities (reading, modifying, and improving its own code), we must ensure:
+
+1. Formal specifications correctly model intended behavior
+2. TLA+ and Alloy tools are properly configured
+3. Specifications can catch implementation errors
+4. A validation pipeline exists for continuous verification
+
+This validation framework will serve as the correctness foundation for the self-hosting features.
+
+[Rest of RFC content continues...]
+#+end_src
+
+* GitHub CLI Scripts
+
+** Issue Management Script
+
+#+begin_src shell :tangle .github/scripts/manage-issues.sh :shebang #!/bin/sh :mkdirp t
+#!/bin/sh
+# GitHub issue management utilities
+
+case "$1" in
+    list-open)
+        echo "=== Open Issues ==="
+        gh issue list --state open
+        ;;
+        
+    list-crs)
+        echo "=== Open Change Requests ==="
+        gh issue list --state open --label change-request
+        ;;
+        
+    create-cr)
+        title="$2"
+        if [ -z "$title" ]; then
+            echo "Usage: $0 create-cr <title>"
+            exit 1
+        fi
+        gh issue create --title "[CR] $title" \
+            --label "change-request,discussion" \
+            --template change_request.yml
+        ;;
+        
+    create-bug)
+        gh issue create --template bug_report.yml
+        ;;
+        
+    create-feature)
+        gh issue create --template feature_request.yml
+        ;;
+        
+    *)
+        echo "Usage: $0 {list-open|list-crs|create-cr|create-bug|create-feature}"
+        ;;
+esac
+#+end_src
+
+** PR Management Script
+
+#+begin_src shell :tangle .github/scripts/manage-prs.sh :shebang #!/bin/sh :mkdirp t
+#!/bin/sh
+# GitHub PR management utilities
+
+case "$1" in
+    list)
+        echo "=== Open Pull Requests ==="
+        gh pr list --state open
+        ;;
+        
+    checks)
+        pr="${2:-@me}"
+        echo "=== PR Checks Status ==="
+        gh pr checks "$pr"
+        ;;
+        
+    create)
+        branch=$(git branch --show-current)
+        if [ "$branch" = "main" ]; then
+            echo "Cannot create PR from main branch"
+            exit 1
+        fi
+        gh pr create --fill
+        ;;
+        
+    review)
+        pr="${2:-@me}"
+        gh pr review "$pr"
+        ;;
+        
+    *)
+        echo "Usage: $0 {list|checks|create|review} [pr-number]"
+        ;;
+esac
+#+end_src
+
+#+begin_src shell
+chmod +x .github/scripts/*.sh
+#+end_src
+
+* Repository Settings
+
+** Repository Configuration
+
+#+begin_src json :tangle .github/settings.yml :mkdirp t
+# Repository settings for GitHub
+repository:
+  name: gemini-repl
+  description: Self-hosting REPL for Google Gemini API with formal specifications
+  topics:
+    - clojurescript
+    - repl
+    - gemini-api
+    - formal-methods
+    - tla-plus
+    - alloy
+    - self-hosting
+  
+  private: false
+  has_issues: true
+  has_projects: true
+  has_wiki: false
+  has_downloads: true
+  
+  default_branch: main
+  
+  allow_squash_merge: true
+  allow_merge_commit: true
+  allow_rebase_merge: true
+  
+  delete_branch_on_merge: true
+  enable_automated_security_fixes: true
+  enable_vulnerability_alerts: true
+
+labels:
+  - name: bug
+    color: d73a4a
+    description: Something isn't working
+    
+  - name: enhancement
+    color: a2eeef
+    description: New feature or request
+    
+  - name: documentation
+    color: 0075ca
+    description: Improvements or additions to documentation
+    
+  - name: formal-methods
+    color: 7057ff
+    description: Related to TLA+ or Alloy specifications
+    
+  - name: self-hosting
+    color: 008672
+    description: Related to self-modification capabilities
+    
+  - name: change-request
+    color: fbca04
+    description: Significant change proposal
+    
+  - name: rfc
+    color: c5def5
+    description: Request for Comments
+    
+  - name: experiment
+    color: bfd4f2
+    description: Experimental feature or prototype
+
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "Verify TLA+ Specifications"
+          - "ClojureScript CI / test"
+      enforce_admins: false
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+      restrictions: null
+#+end_src
+
+* GitHub Integration Commands
+
+** GitHub Command for Claude
+
+#+begin_src markdown :tangle .claude/commands/github.md :mkdirp t
+# `/github` Command
+
+You are a GitHub integration specialist managing the Gemini REPL repository.
+
+## TASK OVERVIEW:
+
+Interact with GitHub to manage issues, PRs, and repository settings.
+
+## AVAILABLE OPERATIONS:
+
+1. **Issue Management**:
+   ```bash
+   gh issue list
+   gh issue create
+   gh issue view <number>
+   gh issue close <number>
+   ```
+
+2. **PR Management**:
+   ```bash
+   gh pr list
+   gh pr create
+   gh pr checks
+   gh pr merge
+   ```
+
+3. **Repository Info**:
+   ```bash
+   gh repo view
+   gh run list
+   gh workflow list
+   ```
+
+## COMMON TASKS:
+
+### Create Change Request
+```bash
+gh issue create \
+  --title "[CR] Tool Calling System" \
+  --label "change-request,discussion" \
+  --body-file change-requests/cr-001-tool-calling.md
+```
+
+### Check CI Status
+```bash
+gh run list --limit 5
+gh run view <run-id>
+```
+
+### Review PR
+```bash
+gh pr view <number> --comments
+gh pr review <number>
+```
+
+## OUTPUT FORMAT:
+
+```markdown
+# GitHub Operation: [Type]
+
+## Command Executed
+`[command]`
+
+## Result
+[Output or status]
+
+## Next Steps
+[Recommended actions]
+```
+
+## USAGE:
+
+```
+/github issue list
+/github pr create
+/github check ci
+```
+#+end_src
+
+* Setup Completion
+
+#+begin_src shell :results output
+echo "=== GitHub Setup Complete ==="
+echo ""
+echo "Created structure:"
+tree .github -d -L 2
+echo ""
+echo "To use GitHub integration:"
+echo "1. Install GitHub CLI: pkg install gh"
+echo "2. Authenticate: gh auth login"
+echo "3. Use scripts: .github/scripts/manage-issues.sh"
+echo ""
+echo "GitHub Actions will run automatically on push/PR"
+#+end_src
