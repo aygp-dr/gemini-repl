@@ -49,11 +49,12 @@
                                    "Content-Type" "application/json"
                                    "Content-Length" (.-length data)}}]
     (let [req (.request https options
-                (fn [res]
+                (fn [^js res]
                   (let [chunks (atom [])]
-                    (.on res "data" #(swap! chunks conj %))
+                    (.on res "data" (fn [chunk] (swap! chunks conj chunk)))
                     (.on res "end"
-                         #(try
+                         (fn []
+                           (try
                             (let [body (.parse js/JSON (.concat js/Buffer (clj->js @chunks)))
                                   text (-> body
                                            (aget "candidates")
@@ -68,8 +69,8 @@
                                             :response text})
                               (callback nil text))
                             (catch js/Error e
-                              (callback e nil)))))))]
-      (.on req "error" #(callback % nil))
+                              (callback e nil))))))))]
+      (.on req "error" (fn [err] (callback err nil)))
       (.write req data)
       (.end req))))
 
