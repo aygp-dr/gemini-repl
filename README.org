@@ -1,0 +1,25 @@
+#+TITLE: Gemini REPL
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-13
+
+* Overview
+
+An interactive console application for the Google Gemini API with formal specifications.
+
+* Setup
+
+1. Copy =.env.example= to =.env= and add your API key
+2. Install dependencies (see language-specific instructions)
+3. Run the REPL
+
+* Project Structure
+
+- =specs/= - Formal specifications (TLA+, Alloy)
+- =src/= - Implementation
+- =tests/= - Property-based tests
+- =docs/= - Documentation
+
+* Formal Methods
+
+This project uses formal specifications to define system behavior before implementation.
+See =specs/README.md= for details.
