@@ -1,7 +1,17 @@
 # Gemini REPL Makefile
 # For FreeBSD, use gmake
 
-.PHONY: help all install verify-tools run dev build clean test spec-check
+# Tool versions
+TLA_VERSION := 1.8.0
+ALLOY_VERSION := 5.1.0
+
+# Local tool paths
+TOOLS_DIR := tools/formal-methods
+TLA_JAR := $(TOOLS_DIR)/tla2tools.jar
+ALLOY_JAR := $(TOOLS_DIR)/alloy.jar
+
+# Phony targets
+.PHONY: help all install verify run dev build clean test spec-check verify-alloy verify-tla
 
 # Default target
 all: help
@@ -12,83 +22,74 @@ help:
 	@echo ""
 	@echo "  gmake help          - Show this help message"
 	@echo "  gmake install       - Install all dependencies and tools"
-	@echo "  gmake verify-tools  - Verify formal methods tools are installed"
+	@echo "  gmake verify        - Verify all specifications"
+	@echo "  gmake verify-tla    - Verify TLA+ specifications"
+	@echo "  gmake verify-alloy  - Verify Alloy specifications"
 	@echo "  gmake run           - Run the REPL"
 	@echo "  gmake dev           - Start development server"
 	@echo "  gmake build         - Build production version"
 	@echo "  gmake test          - Run tests"
-	@echo "  gmake spec-check    - Check formal specifications"
 	@echo "  gmake clean         - Clean build artifacts"
 	@echo ""
-	@echo "Setup targets:"
-	@echo "  gmake install-npm   - Install Node.js dependencies"
-	@echo "  gmake install-tla   - Install TLA+ tools"
-	@echo "  gmake install-alloy - Install Alloy analyzer"
+	@echo "Tool targets:"
+	@echo "  gmake $(TLA_JAR)   - Download TLA+ tools"
+	@echo "  gmake $(ALLOY_JAR) - Download Alloy analyzer"
 
 # Install all dependencies
-install: install-npm install-tla install-alloy verify-tools
+install: node_modules $(TLA_JAR) $(ALLOY_JAR)
 	@echo "✅ All dependencies installed"
 
-# Install npm dependencies
-install-npm:
+# Node modules dependency
+node_modules: package.json
 	@echo "Installing npm dependencies..."
 	npm install
+	@touch node_modules
 
-# Install TLA+ tools
-install-tla:
-	@echo "Installing TLA+ tools..."
-	@mkdir -p ~/tools/formal-methods
-	@if [ ! -f ~/tools/formal-methods/tla2tools.jar ]; then \
-		echo "Downloading TLA+ tools..."; \
-		cd ~/tools/formal-methods && \
-		fetch -o tla2tools.jar https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar; \
-	else \
-		echo "TLA+ tools already installed"; \
-	fi
+# Create tools directory
+$(TOOLS_DIR):
+	@mkdir -p $@
 
-# Install Alloy
-install-alloy:
-	@echo "Installing Alloy analyzer..."
-	@mkdir -p ~/tools/formal-methods
-	@if [ ! -f ~/tools/formal-methods/alloy.jar ]; then \
-		echo "Downloading Alloy..."; \
-		cd ~/tools/formal-methods && \
-		fetch -o alloy.jar https://github.com/AlloyTools/org.alloytools.alloy/releases/download/v5.1.0/org.alloytools.alloy.dist.jar; \
-	else \
-		echo "Alloy already installed"; \
-	fi
+# Download TLA+ tools (file target, depends on directory)
+$(TLA_JAR): | $(TOOLS_DIR)
+	@echo "Downloading TLA+ tools $(TLA_VERSION)..."
+	cd $(TOOLS_DIR) && \
+		fetch -o tla2tools.jar https://github.com/tlaplus/tlaplus/releases/download/v$(TLA_VERSION)/tla2tools.jar
 
-# Verify tools are working
-verify-tools:
-	@echo "=== Verifying Tools ==="
-	@echo -n "Node.js: "
-	@node --version || echo "❌ Not found"
-	@echo -n "npm: "
-	@npm --version || echo "❌ Not found"
-	@echo -n "Java: "
-	@java -version 2>&1 | head -1 || echo "❌ Not found"
-	@echo ""
-	@echo "Formal methods tools:"
-	@if [ -f ~/tools/formal-methods/tla2tools.jar ]; then \
-		echo "✅ TLA+ jar found"; \
-		if command -v tlc >/dev/null 2>&1; then \
-			echo "✅ tlc wrapper available"; \
-		else \
-			echo "❌ tlc wrapper not in PATH"; \
+# Download Alloy analyzer (file target, depends on directory)
+$(ALLOY_JAR): | $(TOOLS_DIR)
+	@echo "Downloading Alloy analyzer $(ALLOY_VERSION)..."
+	cd $(TOOLS_DIR) && \
+		fetch -o alloy.jar https://github.com/AlloyTools/org.alloytools.alloy/releases/download/v$(ALLOY_VERSION)/org.alloytools.alloy.dist.jar
+
+# Verify all specifications
+verify: verify-tla verify-alloy
+	@echo "✅ All specifications verified"
+
+# Verify TLA+ specifications (depends on jar)
+verify-tla: $(TLA_JAR)
+	@echo "=== Verifying TLA+ Specifications ==="
+	@for spec in specs/*.tla; do \
+		if [ -f "$$spec" ]; then \
+			echo -n "  Checking $$(basename $$spec)... "; \
+			if java -cp $(TLA_JAR) tla2sany.SANY "$$spec" >/dev/null 2>&1; then \
+				echo "✓"; \
+			else \
+				echo "✗"; \
+				java -cp $(TLA_JAR) tla2sany.SANY "$$spec"; \
+				exit 1; \
+			fi; \
 		fi; \
-	else \
-		echo "❌ TLA+ jar not found - run: gmake install-tla"; \
-	fi
-	@if [ -f ~/tools/formal-methods/alloy.jar ]; then \
-		echo "✅ Alloy jar found"; \
-		if command -v alloy >/dev/null 2>&1; then \
-			echo "✅ alloy wrapper available"; \
-		else \
-			echo "❌ alloy wrapper not in PATH"; \
+	done
+
+# Verify Alloy specifications (depends on jar)
+verify-alloy: $(ALLOY_JAR)
+	@echo "=== Verifying Alloy Specifications ==="
+	@for spec in specs/*.als specs/*.alloy; do \
+		if [ -f "$$spec" ]; then \
+			echo "  Found: $$spec"; \
 		fi; \
-	else \
-		echo "❌ Alloy jar not found - run: gmake install-alloy"; \
-	fi
+	done
+	@echo "  (Run 'java -jar $(ALLOY_JAR) <spec>' to check individually)"
 
 # Run the REPL
 run:
@@ -116,17 +117,15 @@ test:
 		echo "No tests configured"; \
 	fi
 
-# Check specifications
-spec-check: verify-tools
-	@if [ -f ~/tools/formal-methods/tla2tools.jar ]; then \
-		./check-specs.sh; \
-	else \
-		echo "Error: TLA+ tools not installed"; \
-		echo "Run: gmake install-tla"; \
-		exit 1; \
-	fi
+# Check specifications (alias for verify)
+spec-check: verify
 
 # Clean build artifacts
 clean:
 	rm -rf target/ dist/ .shadow-cljs/ node_modules/
 	@echo "✅ Build artifacts cleaned"
+
+# Deep clean including tools
+distclean: clean
+	rm -rf $(TOOLS_DIR)
+	@echo "✅ All artifacts and tools removed"

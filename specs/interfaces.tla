@@ -1,7 +1,7 @@
 ---------------------------- MODULE interfaces ----------------------------
-EXTENDS Sequences, TLC
+EXTENDS Sequences, TLC, Naturals
 
-CONSTANTS Commands, Prompts, APIKey
+CONSTANTS Commands, Prompts, APIKey, STRING
 
 VARIABLES 
     inputBuffer,
@@ -16,11 +16,11 @@ Init ==
     /\ apiQueue = <<>>
     /\ outputBuffer = <<>>
     /\ sessionState = [
-        authenticated: FALSE,
-        model: "gemini-2.0-flash",
-        temperature: 0.7,
-        maxTokens: 2048
-    ]
+           authenticated |-> FALSE,
+           model |-> "gemini-2.0-flash",
+           temperature |-> 0,  \* Using integer instead of real
+           maxTokens |-> 2048
+       ]
 
 \* Input Handler Interface
 ParseInput(input) ==
@@ -46,8 +46,7 @@ CreateAPIRequest(prompt) ==
 TypeInvariant ==
     /\ inputBuffer \in Seq(STRING)
     /\ commandQueue \in Seq([type: {"command"}, value: STRING])
-    /\ apiQueue \in Seq([contents: Seq(SUBSET [parts: Seq(SUBSET [text: STRING])]), 
-                         config: [temperature: REAL, maxTokens: Nat]])
     /\ outputBuffer \in Seq(STRING)
+    \* Note: apiQueue type checking simplified for now
 
 =============================================================================

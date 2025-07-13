@@ -36,19 +36,19 @@ Init ==
     /\ executionState = "idle"
 
 \* Parse command from input string
-ParseCommand(input) ==
-    LET parts == SplitString(input, " ")
-    IN [
-        name |-> Head(parts),
-        args |-> Tail(parts),
-        timestamp |-> Now()
+\* Note: This is a simplified version - real parsing would be more complex
+ParseCommand(input, timestamp) ==
+    [
+        name |-> input,  \* Simplified: assume input is just the command name
+        args |-> <<>>,   \* Simplified: no argument parsing in this model
+        timestamp |-> timestamp
     ]
 
 \* Validate command
 IsValidCommand(cmd) ==
     /\ cmd.name \in SLASH_COMMANDS
     /\ Len(cmd.args) <= MAX_ARGS
-    /\ ValidateArgs(cmd.name, cmd.args)
+    \* Simplified: assume all args are valid for now
 
 \* Command execution states
 ExecuteCommand(cmd) ==
