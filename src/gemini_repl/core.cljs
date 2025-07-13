@@ -12,7 +12,7 @@
 (defn get-env [key]
   (aget (.-env process) key))
 
-;; Simple FIFO logging
+;; Simple FIFO and file logging
 (defn log-to-fifo [entry]
   (let [fifo-path (or (get-env "GEMINI_LOG_FIFO") "/tmp/gemini.fifo")]
     (when (get-env "GEMINI_LOG_ENABLED")
@@ -28,6 +28,25 @@
           ;; Ignore errors to not disrupt REPL
           nil)))))
 
+(defn log-to-file [entry]
+  (let [log-path (or (get-env "GEMINI_LOG_PATH") "./logs/gemini-repl.log")
+        log-type (get-env "GEMINI_LOG_TYPE")]
+    (when (and (get-env "GEMINI_LOG_ENABLED")
+               (or (= log-type "both") (= log-type "file")))
+      (try
+        (let [data (str (.stringify js/JSON (clj->js entry)) "\n")]
+          (.appendFileSync fs log-path data))
+        (catch js/Error e
+          ;; Ignore errors to not disrupt REPL
+          nil)))))
+
+(defn log-entry [entry]
+  (let [log-type (get-env "GEMINI_LOG_TYPE")]
+    (when (or (= log-type "both") (= log-type "fifo"))
+      (log-to-fifo entry))
+    (when (or (= log-type "both") (= log-type "file"))
+      (log-to-file entry))))
+
 (defn create-interface []
   (.createInterface readline
     #js {:input (.-stdin process)
@@ -36,9 +55,9 @@
 
 (defn make-request [api-key prompt callback]
   ;; Log the request
-  (log-to-fifo {:timestamp (.toISOString (js/Date.))
-                :type "request"
-                :prompt prompt})
+  (log-entry {:timestamp (.toISOString (js/Date.))
+              :type "request"
+              :prompt prompt})
   (let [data (.stringify js/JSON
                #js {:contents #js [#js {:parts #js [#js {:text prompt}]}]})
         options #js {:hostname "generativelanguage.googleapis.com"
@@ -64,9 +83,9 @@
                                            (aget 0)
                                            (aget "text"))]
                               ;; Log the response
-                              (log-to-fifo {:timestamp (.toISOString (js/Date.))
-                                            :type "response"
-                                            :response text})
+                              (log-entry {:timestamp (.toISOString (js/Date.))
+                                          :type "response"
+                                          :response text})
                               (callback nil text))
                             (catch js/Error e
                               (callback e nil))))))))]
