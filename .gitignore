@@ -10,3 +10,4 @@ target/
 .clj-kondo/
 .cpcache/
 tools/
+.shadow-cljs/

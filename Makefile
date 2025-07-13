@@ -103,11 +103,11 @@ run:
 
 # Start tmux development dashboard
 dashboard:
-	./tmux-dashboard.sh
+	./scripts/tmux-dashboard.sh
 
 # Restart dashboard
 dashboard-restart:
-	./tmux-dashboard.sh --restart
+	./scripts/tmux-dashboard.sh --restart
 
 # Development mode
 dev:

@@ -1,6 +1,6 @@
-# Documentation
+#+TITLE: Documentation
 
-## Contents
+* Contents
 
 - Architecture diagrams
 - API documentation

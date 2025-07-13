@@ -1,8 +1,8 @@
-# Tests
+#+TITLE: Tests
 
 Property-based tests derived from formal specifications.
 
-## Test Categories
+* Test Categories
 
 - Unit tests for individual components
 - Integration tests for component interactions
