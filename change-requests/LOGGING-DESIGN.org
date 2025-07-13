@@ -1,0 +1,803 @@
+#+TITLE: Logging Feature Design and Implementation
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-13
+#+PROPERTY: header-args :mkdirp yes
+
+* Overview
+
+This document contains the complete design specification for the Gemini REPL logging feature, including requirements, architecture, control flows, and implementation details.
+
+* Requirements
+
+** Core Requirements
+
+*** Functional Requirements
+- Log all API requests and responses
+- Support multiple output destinations (file, FIFO)
+- Configurable log formats (JSON, text)
+- Non-blocking operation
+- Log rotation and cleanup
+- Error recovery and fallback
+
+*** Non-Functional Requirements
+- Performance: <1ms overhead per operation
+- Reliability: No data loss during normal operation
+- Security: No sensitive data exposure
+- Scalability: Handle 1000+ logs/second
+
+** User Stories
+
+#+begin_src org
+| As a...    | I want to...                    | So that...                           |
+|------------+---------------------------------+--------------------------------------|
+| Developer  | See all API interactions        | I can debug issues                   |
+| Operator   | Monitor usage in real-time      | I can track system health            |
+| Researcher | Analyze conversation patterns   | I can improve prompts                |
+| Agent      | Consume structured logs         | I can optimize system behavior       |
+#+end_src
+
+* Architecture
+
+** System Architecture
+
+#+begin_src mermaid :file architecture.png :exports results
+graph TB
+    subgraph "REPL Core"
+        A[User Input] --> B[Process Prompt]
+        B --> C[API Request]
+        C --> D[API Response]
+        D --> E[Display Output]
+    end
+    
+    subgraph "Logger Module"
+        F[Logger Core]
+        G[Format Engine]
+        H[Buffer Manager]
+        I[Output Router]
+    end
+    
+    subgraph "Output Adapters"
+        J[File Writer]
+        K[FIFO Writer]
+        L[Future: S3]
+        M[Future: Syslog]
+    end
+    
+    subgraph "Configuration"
+        N[Environment Vars]
+        O[Config File]
+        P[Runtime Flags]
+    end
+    
+    C -->|Request Event| F
+    D -->|Response Event| F
+    
+    F --> G
+    G -->|Formatted Entry| H
+    H -->|Batch| I
+    
+    I --> J
+    I --> K
+    I -.-> L
+    I -.-> M
+    
+    N --> F
+    O --> F
+    P --> F
+    
+    J -->|Rotation Trigger| Q[Rotation Manager]
+    Q -->|New File| J
+    
+    style F fill:#f9f,stroke:#333,stroke-width:4px
+    style H fill:#bbf,stroke:#333,stroke-width:2px
+#+end_src
+
+** Component Descriptions
+
+*** Logger Core
+Central orchestrator that:
+- Receives log events
+- Applies configuration
+- Routes to appropriate handlers
+- Manages lifecycle
+
+*** Format Engine
+Transforms log entries:
+- JSON formatter
+- Text formatter
+- Custom formatters
+- Sanitization layer
+
+*** Buffer Manager
+Prevents blocking:
+- Async write queue
+- Overflow handling
+- Batch operations
+- Memory management
+
+*** Output Router
+Directs logs to destinations:
+- Multiple simultaneous outputs
+- Fallback strategies
+- Health checking
+- Load balancing
+
+* Control Flows
+
+** Logger Core Processing Flow
+
+#+begin_src mermaid :file logger-flow.png :exports results
+flowchart TD
+    A[Log Event Received] --> B{Logging Enabled?}
+    B -->|No| C[Return]
+    B -->|Yes| D[Create Log Entry]
+    
+    D --> E[Add Metadata]
+    E --> F[Sanitize Data]
+    F --> G{Format Type?}
+    
+    G -->|JSON| H[JSON Formatter]
+    G -->|Text| I[Text Formatter]
+    G -->|Custom| J[Custom Formatter]
+    
+    H --> K[Enqueue Entry]
+    I --> K
+    J --> K
+    
+    K --> L{Buffer Full?}
+    L -->|No| M[Add to Buffer]
+    L -->|Yes| N[Flush Buffer]
+    
+    N --> O{Output Type?}
+    M --> P[Return Success]
+    
+    O -->|File| Q[Write to File]
+    O -->|FIFO| R[Write to FIFO]
+    O -->|Both| S[Write to Both]
+    
+    Q --> T{Write Success?}
+    R --> T
+    S --> T
+    
+    T -->|Yes| U[Update Metrics]
+    T -->|No| V[Handle Error]
+    
+    U --> P
+    V --> W[Log to Stderr]
+    W --> X[Increment Error Count]
+    X --> P
+    
+    subgraph "Sanitization"
+        F1[Remove API Keys]
+        F2[Redact PII]
+        F3[Escape Specials]
+        F --> F1 --> F2 --> F3
+    end
+    
+    subgraph "Metadata"
+        E1[Timestamp]
+        E2[Session ID]
+        E3[Request ID]
+        E4[Version]
+        E --> E1 & E2 & E3 & E4
+    end
+    
+    style D fill:#f9f,stroke:#333,stroke-width:4px
+    style K fill:#bbf,stroke:#333,stroke-width:2px
+    style V fill:#fbb,stroke:#333,stroke-width:2px
+#+end_src
+
+** FIFO Blocking Mitigation Flow
+
+#+begin_src mermaid :file fifo-flow.png :exports results
+flowchart TD
+    A[Write to FIFO Request] --> B[Check FIFO State]
+    
+    B --> C{FIFO Exists?}
+    C -->|No| D[Create FIFO]
+    C -->|Yes| E{Has Reader?}
+    
+    D --> F{Creation Success?}
+    F -->|No| G[Fallback to File]
+    F -->|Yes| E
+    
+    E -->|No Reader| H[Check Buffer Space]
+    E -->|Has Reader| I[Attempt Write]
+    
+    H --> J{Buffer Available?}
+    J -->|No| K[Drop Oldest Entry]
+    J -->|Yes| L[Buffer Entry]
+    
+    K --> L
+    L --> M[Set Reader Check Timer]
+    M --> N[Return Buffered]
+    
+    I --> O[Set Write Timeout]
+    O --> P{Write Complete?}
+    
+    P -->|Success| Q[Update Metrics]
+    P -->|Timeout| R[Cancel Write]
+    P -->|Error| S[Handle Error]
+    
+    R --> T{Retry Count?}
+    T -->|< Max| U[Backoff Wait]
+    T -->|>= Max| V[Switch to Buffer]
+    
+    U --> I
+    V --> L
+    
+    S --> W{Error Type?}
+    W -->|EPIPE| X[No Reader]
+    W -->|EAGAIN| Y[Try Again]
+    W -->|Other| Z[Log Error]
+    
+    X --> H
+    Y --> U
+    Z --> G
+    
+    Q --> AA[Return Success]
+    G --> AB[Return Fallback]
+    N --> AC[Return Buffered]
+    
+    subgraph "Buffer Management"
+        L1[In-Memory Queue]
+        L2[Max Size: 1000]
+        L3[FIFO Eviction]
+        L --> L1 --> L2 --> L3
+    end
+    
+    subgraph "Timeouts"
+        O1[Write: 100ms]
+        O2[Connect: 500ms]
+        O3[Retry: 1s, 2s, 4s]
+        O --> O1 & O2 & O3
+    end
+    
+    style I fill:#f9f,stroke:#333,stroke-width:4px
+    style V fill:#bbf,stroke:#333,stroke-width:2px
+    style G fill:#fbb,stroke:#333,stroke-width:2px
+#+end_src
+
+** Log Rotation Flow
+
+#+begin_src mermaid :file rotation-flow.png :exports results
+flowchart TD
+    A[Write Log Entry] --> B[Check Rotation Triggers]
+    
+    B --> C{Size Limit?}
+    C -->|Exceeded| D[Initiate Rotation]
+    C -->|OK| E{Time Limit?}
+    
+    E -->|Exceeded| D
+    E -->|OK| F{Entry Count?}
+    
+    F -->|Exceeded| D
+    F -->|OK| G[Write Entry]
+    
+    D --> H[Acquire Lock]
+    H --> I[Close Current File]
+    I --> J[Generate New Filename]
+    
+    J --> K{Compression Enabled?}
+    K -->|Yes| L[Compress Old File]
+    K -->|No| M[Rename File]
+    
+    L --> N[Delete Original]
+    N --> O[Update Index]
+    M --> O
+    
+    O --> P{Max Files Exceeded?}
+    P -->|Yes| Q[Find Oldest]
+    P -->|No| R[Create New File]
+    
+    Q --> S[Delete Oldest]
+    S --> R
+    
+    R --> T[Open New File]
+    T --> U[Update Current Handle]
+    U --> V[Release Lock]
+    V --> W[Write Pending Entry]
+    
+    G --> X[Update Metrics]
+    W --> X
+    
+    X --> Y[Return Success]
+    
+    subgraph "Rotation Triggers"
+        C1[Size: 10MB default]
+        C2[Time: 24h default]
+        C3[Count: 100k entries]
+        B --> C1 & C2 & C3
+    end
+    
+    subgraph "Filename Pattern"
+        J1[gemini-repl-2025-07-13.log]
+        J2[gemini-repl-2025-07-13.1.log]
+        J3[gemini-repl-2025-07-13.2.log]
+        J --> J1 --> J2 --> J3
+    end
+    
+    subgraph "Compression"
+        L1[gzip -9]
+        L2[.log → .log.gz]
+        L3[70% size reduction]
+        L --> L1 --> L2 --> L3
+    end
+    
+    style D fill:#f9f,stroke:#333,stroke-width:4px
+    style H fill:#bbf,stroke:#333,stroke-width:2px
+    style Q fill:#fbb,stroke:#333,stroke-width:2px
+#+end_src
+
+** Error Handling Flow
+
+#+begin_src mermaid :file error-flow.png :exports results
+flowchart TD
+    A[Error Occurred] --> B{Error Type?}
+    
+    B -->|IO Error| C[File System Error]
+    B -->|Permission| D[Access Denied]
+    B -->|Network| E[FIFO/Socket Error]
+    B -->|Format| F[Serialization Error]
+    B -->|Resource| G[Resource Exhaustion]
+    
+    C --> H{Disk Full?}
+    H -->|Yes| I[Emergency Cleanup]
+    H -->|No| J{File Locked?}
+    
+    I --> K[Delete Old Logs]
+    K --> L[Retry Write]
+    
+    J -->|Yes| M[Wait and Retry]
+    J -->|No| N[Log to Stderr]
+    
+    D --> O{Critical Path?}
+    O -->|Yes| P[Disable Logging]
+    O -->|No| Q[Try Alt Location]
+    
+    E --> R{Retryable?}
+    R -->|Yes| S[Exponential Backoff]
+    R -->|No| T[Switch to File]
+    
+    F --> U[Log Raw Data]
+    U --> V[Skip Entry]
+    
+    G --> W{Memory Issue?}
+    W -->|Yes| X[Flush Buffers]
+    W -->|No| Y{FD Limit?}
+    
+    Y -->|Yes| Z[Close Old Handles]
+    Y -->|No| AA[Unknown Resource]
+    
+    X --> AB[Reduce Buffer Size]
+    Z --> AC[Reopen Files]
+    
+    M --> AD{Retry Success?}
+    S --> AD
+    L --> AD
+    
+    AD -->|Yes| AE[Continue Normal]
+    AD -->|No| AF{Max Retries?}
+    
+    AF -->|No| AG[Increment Counter]
+    AF -->|Yes| AH[Circuit Breaker]
+    
+    AG --> AI[Delay Next Retry]
+    AH --> AJ[Disable Feature]
+    
+    N --> AK[Increment Metrics]
+    P --> AK
+    T --> AK
+    V --> AK
+    AJ --> AK
+    
+    AK --> AL[Alert If Threshold]
+    AL --> AM[Return Error State]
+    
+    subgraph "Retry Strategy"
+        S1[Attempt 1: 100ms]
+        S2[Attempt 2: 500ms]
+        S3[Attempt 3: 2s]
+        S4[Attempt 4: 10s]
+        S5[Attempt 5: Disable]
+        S --> S1 --> S2 --> S3 --> S4 --> S5
+    end
+    
+    subgraph "Circuit Breaker"
+        AH1[Disable for 5 min]
+        AH2[Log to stderr only]
+        AH3[Set health = degraded]
+        AH --> AH1 & AH2 & AH3
+    end
+    
+    subgraph "Emergency Actions"
+        I1[Delete logs > 7 days]
+        I2[Compress recent logs]
+        I3[Truncate current log]
+        I --> I1 & I2 & I3
+    end
+    
+    style A fill:#fbb,stroke:#333,stroke-width:4px
+    style AH fill:#f99,stroke:#333,stroke-width:4px
+    style AE fill:#9f9,stroke:#333,stroke-width:2px
+#+end_src
+
+* Implementation
+
+** Configuration Schema
+
+#+begin_src clojure :tangle src/gemini_repl/logger/config.cljs
+(ns gemini-repl.logger.config)
+
+(def default-config
+  {:enabled true
+   :type :both                    ; :file, :fifo, :both
+   :format :json                  ; :json, :text
+   :file {:path "./logs/gemini-repl.log"
+          :rotate-size "10MB"
+          :rotate-count 5
+          :rotate-age "7d"
+          :permissions 0600}
+   :fifo {:path "/tmp/gemini-repl.fifo"
+          :buffer-size 1000
+          :retry-max 5
+          :timeout-ms 100}
+   :sanitize {:api-keys true
+              :pii false
+              :max-length 10000}
+   :performance {:batch-size 100
+                 :flush-interval-ms 100
+                 :async true}})
+
+(defn load-from-env []
+  (merge default-config
+         (cond-> {}
+           (.-GEMINI_LOG_ENABLED js/process.env)
+           (assoc :enabled (= "true" (.-GEMINI_LOG_ENABLED js/process.env)))
+           
+           (.-GEMINI_LOG_TYPE js/process.env)
+           (assoc :type (keyword (.-GEMINI_LOG_TYPE js/process.env)))
+           
+           (.-GEMINI_LOG_PATH js/process.env)
+           (assoc-in [:file :path] (.-GEMINI_LOG_PATH js/process.env))
+           
+           (.-GEMINI_LOG_FIFO js/process.env)
+           (assoc-in [:fifo :path] (.-GEMINI_LOG_FIFO js/process.env)))))
+#+end_src
+
+** Logger Core Implementation
+
+#+begin_src clojure :tangle src/gemini_repl/logger/core.cljs
+(ns gemini-repl.logger.core
+  (:require ["fs" :as fs]
+            ["path" :as path]
+            [gemini-repl.logger.config :as config]
+            [gemini-repl.logger.formatters :as fmt]
+            [gemini-repl.logger.outputs :as out]))
+
+(defonce logger-state (atom nil))
+
+(defn create-logger
+  ([] (create-logger (config/load-from-env)))
+  ([config]
+   {:config config
+    :buffer (atom [])
+    :metrics (atom {:total 0 :errors 0 :dropped 0})
+    :outputs (out/create-outputs config)
+    :timer nil}))
+
+(defn start-logger! []
+  (let [logger (create-logger)]
+    (reset! logger-state logger)
+    ;; Start flush timer
+    (when (get-in logger [:config :performance :async])
+      (let [interval (get-in logger [:config :performance :flush-interval-ms])]
+        (swap! logger-state assoc :timer
+               (js/setInterval #(flush-buffer! logger) interval))))
+    logger))
+
+(defn stop-logger! []
+  (when-let [logger @logger-state]
+    (when-let [timer (:timer logger)]
+      (js/clearInterval timer))
+    (flush-buffer! logger)
+    (out/close-all (:outputs logger))
+    (reset! logger-state nil)))
+
+(defn log-entry! [entry]
+  (when-let [logger @logger-state]
+    (when (get-in logger [:config :enabled])
+      (let [formatted (fmt/format-entry entry (get-in logger [:config :format]))
+            buffer (:buffer logger)]
+        (swap! buffer conj formatted)
+        (swap! (:metrics logger) update :total inc)
+        
+        ;; Flush if buffer full
+        (when (>= (count @buffer) 
+                  (get-in logger [:config :performance :batch-size]))
+          (flush-buffer! logger))))))
+
+(defn flush-buffer! [logger]
+  (let [buffer (:buffer logger)
+        entries @buffer]
+    (when (seq entries)
+      (reset! buffer [])
+      (doseq [output (:outputs logger)]
+        (out/write-batch output entries)))))
+#+end_src
+
+** Output Adapters
+
+#+begin_src clojure :tangle src/gemini_repl/logger/outputs.cljs
+(ns gemini-repl.logger.outputs
+  (:require ["fs" :as fs]
+            ["path" :as path]))
+
+(defprotocol LogOutput
+  (write-batch [this entries])
+  (close [this]))
+
+(defrecord FileOutput [stream path config]
+  LogOutput
+  (write-batch [this entries]
+    (try
+      (doseq [entry entries]
+        (.write stream (str entry "\n")))
+      (catch js/Error e
+        (js/console.error "File write error:" e))))
+  
+  (close [this]
+    (.end stream)))
+
+(defrecord FIFOOutput [path config buffer]
+  LogOutput
+  (write-batch [this entries]
+    ;; Non-blocking FIFO write with timeout
+    (let [timeout (:timeout-ms config)]
+      (try
+        (let [fd (fs/openSync path "a" fs/constants.O_NONBLOCK)]
+          (doseq [entry entries]
+            (fs/writeSync fd (str entry "\n")))
+          (fs/closeSync fd))
+        (catch js/Error e
+          ;; Buffer if no reader
+          (if (= (.-code e) "EPIPE")
+            (swap! buffer #(take (:buffer-size config) (concat % entries)))
+            (js/console.error "FIFO write error:" e))))))
+  
+  (close [this]
+    ;; No-op for FIFO
+    ))
+
+(defn create-file-output [config]
+  (let [log-path (get-in config [:file :path])
+        dir (path/dirname log-path)]
+    ;; Ensure directory exists
+    (when-not (fs/existsSync dir)
+      (fs/mkdirSync dir #js {:recursive true}))
+    
+    (->FileOutput
+     (fs/createWriteStream log-path #js {:flags "a"})
+     log-path
+     (:file config))))
+
+(defn create-fifo-output [config]
+  (let [fifo-path (get-in config [:fifo :path])]
+    ;; Create FIFO if doesn't exist
+    (when-not (fs/existsSync fifo-path)
+      (try
+        (fs/mkfifoSync fifo-path 0o600)
+        (catch js/Error e
+          (js/console.warn "FIFO creation failed:" e))))
+    
+    (->FIFOOutput
+     fifo-path
+     (:fifo config)
+     (atom []))))
+
+(defn create-outputs [config]
+  (case (:type config)
+    :file [(create-file-output config)]
+    :fifo [(create-fifo-output config)]
+    :both [(create-file-output config)
+           (create-fifo-output config)]
+    []))
+
+(defn close-all [outputs]
+  (doseq [output outputs]
+    (close output)))
+#+end_src
+
+* Testing
+
+** Unit Tests
+
+#+begin_src clojure :tangle test/gemini_repl/logger_test.cljs
+(ns gemini-repl.logger-test
+  (:require [cljs.test :refer-macros [deftest is testing]]
+            [gemini-repl.logger.core :as logger]
+            [gemini-repl.logger.config :as config]))
+
+(deftest test-logger-creation
+  (testing "Logger creates with default config"
+    (let [log (logger/create-logger)]
+      (is (some? log))
+      (is (= :both (get-in log [:config :type])))
+      (is (= :json (get-in log [:config :format])))))
+  
+  (testing "Logger respects custom config"
+    (let [custom-config (assoc config/default-config :type :file)
+          log (logger/create-logger custom-config)]
+      (is (= :file (get-in log [:config :type]))))))
+
+(deftest test-log-entry
+  (testing "Log entry adds to buffer"
+    (let [log (logger/create-logger)]
+      (logger/log-entry! {:type :request :data {:prompt "test"}})
+      (is (= 1 (count @(:buffer log)))))))
+
+(deftest test-sanitization
+  (testing "API keys are redacted"
+    (let [entry {:headers {"x-goog-api-key" "secret-key"}}
+          sanitized (logger/sanitize entry)]
+      (is (= "***REDACTED***" (get-in sanitized [:headers "x-goog-api-key"]))))))
+#+end_src
+
+** Integration Tests
+
+#+begin_src bash :tangle test/integration/logging_test.sh :shebang #!/bin/bash
+#!/bin/bash
+# Integration test for logging feature
+
+# Setup
+TEST_DIR=$(mktemp -d)
+export GEMINI_LOG_ENABLED=true
+export GEMINI_LOG_PATH="$TEST_DIR/test.log"
+export GEMINI_LOG_TYPE=file
+
+# Start REPL in background
+timeout 30s node target/repl.js << EOF &
+REPL_PID=$!
+/help
+What is 2+2?
+/exit
+EOF
+
+# Wait for REPL to finish
+wait $REPL_PID
+
+# Verify logs exist
+if [ -f "$TEST_DIR/test.log" ]; then
+    echo "✓ Log file created"
+    
+    # Check content
+    if grep -q '"type":"request"' "$TEST_DIR/test.log"; then
+        echo "✓ Request logged"
+    else
+        echo "✗ No request found in log"
+        exit 1
+    fi
+    
+    if grep -q '"type":"response"' "$TEST_DIR/test.log"; then
+        echo "✓ Response logged"
+    else
+        echo "✗ No response found in log"
+        exit 1
+    fi
+else
+    echo "✗ Log file not created"
+    exit 1
+fi
+
+# Cleanup
+rm -rf "$TEST_DIR"
+echo "✓ All tests passed"
+#+end_src
+
+* Risks and Mitigations
+
+** Risk Matrix
+
+#+begin_src org
+| Risk                    | Impact | Likelihood | Mitigation                               |
+|-------------------------+--------+------------+------------------------------------------|
+| FIFO Blocking           | High   | Medium     | Non-blocking writes, timeout             |
+| Disk Space Exhaustion   | High   | Low        | Rotation, size limits, monitoring        |
+| Performance Degradation | High   | Medium     | Async queue, batching, sampling          |
+| API Key Leakage         | Crit   | Low        | Sanitization, audit, permissions         |
+| Log Injection           | Med    | Low        | Input validation, escaping               |
+| File Handle Exhaustion  | Med    | Low        | Pooling, cleanup, monitoring             |
+#+end_src
+
+** Mitigation Strategies
+
+*** FIFO Blocking
+- Use O_NONBLOCK flag
+- Implement timeout mechanism
+- Buffer when no reader
+- Fallback to file output
+
+*** Performance
+- Async write operations
+- Batch processing
+- Configurable sampling
+- Circuit breaker pattern
+
+*** Security
+- Automatic key redaction
+- PII detection options
+- Secure file permissions
+- No code execution paths
+
+* Success Criteria
+
+** Acceptance Tests
+
+*** Test 1: Basic Logging
+#+begin_src bash
+GEMINI_LOG_ENABLED=true gmake run
+# Send prompt, verify logs created
+#+end_src
+
+*** Test 2: FIFO Streaming
+#+begin_src bash
+mkfifo /tmp/test.fifo
+cat /tmp/test.fifo | jq '.type' &
+GEMINI_LOG_TYPE=fifo GEMINI_LOG_FIFO=/tmp/test.fifo gmake run
+#+end_src
+
+*** Test 3: Performance Impact
+- Baseline: Run 100 prompts without logging
+- With logging: Run 100 prompts
+- Difference should be <5%
+
+*** Test 4: Log Rotation
+- Set small rotation size (1KB)
+- Send multiple prompts
+- Verify rotation occurs
+
+*** Test 5: Error Recovery
+- Write to read-only directory
+- Verify fallback behavior
+- No crashes
+
+** Metrics
+
+- Log write latency: p99 < 10ms
+- Buffer queue size: < 1000 entries
+- Write failure rate: < 1%
+- Memory usage: < 10MB for logger
+
+* Future Enhancements
+
+** Token Counting (CR-002)
+#+begin_src json
+{
+  "prompt_tokens": 42,
+  "response_tokens": 156,
+  "total_tokens": 198,
+  "estimated_cost": 0.0003
+}
+#+end_src
+
+** Context Window Tracking (CR-003)
+#+begin_src json
+{
+  "messages_in_session": 10,
+  "total_context_tokens": 2048,
+  "remaining_context": 2048
+}
+#+end_src
+
+** Performance Analytics (CR-004)
+- Requests per minute
+- Average latency
+- Error rates
+- Cache hit rates
+
+* References
+
+- [[https://nodejs.org/api/fs.html][Node.js File System API]]
+- [[https://www.gnu.org/software/coreutils/manual/html_node/mkfifo-invocation.html][mkfifo Manual]]
+- [[https://github.com/trentm/node-bunyan][Bunyan Logger]] (inspiration)
+- [[https://12factor.net/logs][12 Factor App: Logs]]

@@ -3,6 +3,7 @@
             ["https" :as https]
             ["process" :as process]
             ["dotenv" :as dotenv]
+            ["fs" :as fs]
             [clojure.string :as str]))
 
 ;; Load environment variables
@@ -11,6 +12,22 @@
 (defn get-env [key]
   (aget (.-env process) key))
 
+;; Simple FIFO logging
+(defn log-to-fifo [entry]
+  (let [fifo-path (or (get-env "GEMINI_LOG_FIFO") "/tmp/gemini.fifo")]
+    (when (get-env "GEMINI_LOG_ENABLED")
+      (try
+        ;; Use synchronous write for better FIFO compatibility
+        (let [data (str (.stringify js/JSON (clj->js entry)) "\n")]
+          (try
+            (.appendFileSync fs fifo-path data)
+            (catch js/Error e
+              ;; Silently ignore FIFO errors (no reader, etc.)
+              nil)))
+        (catch js/Error e
+          ;; Ignore errors to not disrupt REPL
+          nil)))))
+
 (defn create-interface []
   (.createInterface readline
     #js {:input (.-stdin process)
@@ -18,6 +35,10 @@
          :prompt "gemini> "}))
 
 (defn make-request [api-key prompt callback]
+  ;; Log the request
+  (log-to-fifo {:timestamp (.toISOString (js/Date.))
+                :type "request"
+                :prompt prompt})
   (let [data (.stringify js/JSON
                #js {:contents #js [#js {:parts #js [#js {:text prompt}]}]})
         options #js {:hostname "generativelanguage.googleapis.com"
@@ -41,6 +62,10 @@
                                            (aget "parts")
                                            (aget 0)
                                            (aget "text"))]
+                              ;; Log the response
+                              (log-to-fifo {:timestamp (.toISOString (js/Date.))
+                                            :type "response"
+                                            :response text})
                               (callback nil text))
                             (catch js/Error e
                               (callback e nil)))))))]
