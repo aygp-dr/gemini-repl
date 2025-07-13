@@ -30,6 +30,7 @@ help:
 	@echo "  gmake build         - Build production version"
 	@echo "  gmake test          - Run tests"
 	@echo "  gmake clean         - Clean build artifacts"
+	@echo "  gmake dashboard     - Start tmux development dashboard"
 	@echo ""
 	@echo "Tool targets:"
 	@echo "  gmake $(TLA_JAR)   - Download TLA+ tools"
@@ -99,6 +100,14 @@ run:
 		exit 1; \
 	fi
 	./scripts/run.sh
+
+# Start tmux development dashboard
+dashboard:
+	./tmux-dashboard.sh
+
+# Restart dashboard
+dashboard-restart:
+	./tmux-dashboard.sh --restart
 
 # Development mode
 dev:
