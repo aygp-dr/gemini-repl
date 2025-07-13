@@ -150,7 +150,7 @@ resources/:
 resources/repl-banner.txt: resources/
 	@echo "Generating REPL banner..."
 	@if command -v toilet >/dev/null 2>&1; then \
-		toilet -f mono12 "Gemini REPL" > $@; \
+		toilet -f future "Gemini REPL" > $@; \
 		echo "" >> $@; \
 		echo "  🤖 Self-Hosting ClojureScript REPL" >> $@; \
 		echo "  📝 Logging enabled via GEMINI_LOG_ENABLED" >> $@; \
