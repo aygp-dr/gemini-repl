@@ -1,0 +1,270 @@
+// Alloy specification for Gemini API request/response context
+module gemini_api
+
+// Basic types
+abstract sig String {}
+abstract sig Timestamp {}
+abstract sig HTTPStatus {}
+abstract sig LogLevel {}
+abstract sig LogType {}
+
+// HTTP status codes
+one sig OK, BadRequest, Unauthorized, Forbidden, TooManyRequests, InternalError, ServiceUnavailable extends HTTPStatus {}
+
+// Log levels and types
+one sig Info, Debug extends LogLevel {}
+one sig Request, Response, RequestDebug, ResponseDebug extends LogType {}
+
+// Token usage metadata
+sig TokenUsage {
+    promptTokens: Int,
+    candidatesTokens: Int,
+    totalTokens: Int
+} {
+    promptTokens >= 0
+    candidatesTokens >= 0
+    totalTokens >= 0
+    totalTokens = promptTokens.add[candidatesTokens]
+}
+
+// Request context structure
+sig RequestContext {
+    timestamp: Timestamp,
+    prompt: String,
+    model: String,
+    apiKey: String,
+    startTime: Int
+} {
+    startTime >= 0
+}
+
+// Response context structure  
+sig ResponseContext {
+    timestamp: Timestamp,
+    status: HTTPStatus,
+    responseText: String,
+    usage: TokenUsage,
+    endTime: Int,
+    duration: Int
+} {
+    endTime >= 0
+    duration >= 0
+    endTime >= duration // end time should be after start + duration
+}
+
+// Session state tracking
+sig SessionState {
+    totalTokens: Int,
+    totalCost: Int, // In micro-dollars to avoid floating point
+    requestCount: Int
+} {
+    totalTokens >= 0
+    totalCost >= 0
+    requestCount >= 0
+}
+
+// Log entry structure
+sig LogEntry {
+    timestamp: Timestamp,
+    logType: LogType,
+    level: LogLevel,
+    request: lone RequestContext,
+    response: lone ResponseContext,
+    session: lone SessionState
+}
+
+// API interaction session
+sig APISession {
+    requests: set RequestContext,
+    responses: set ResponseContext,
+    logs: set LogEntry,
+    currentState: SessionState
+}
+
+// Predicates for validation
+pred validRequest[req: RequestContext] {
+    // API key must exist (non-empty)
+    some req.apiKey
+    // Prompt must exist
+    some req.prompt
+    // Model must be valid Gemini model
+    req.model in geminiModels
+}
+
+pred validResponse[resp: ResponseContext] {
+    // Successful responses must have valid token usage
+    resp.status = OK implies {
+        some resp.usage
+        resp.usage.totalTokens > 0
+    }
+    // Duration must be positive for completed responses
+    resp.status = OK implies resp.duration > 0
+}
+
+pred validLogEntry[entry: LogEntry] {
+    // Debug logs must have more detailed information
+    entry.level = Debug implies {
+        entry.logType in RequestDebug + ResponseDebug
+        entry.logType = RequestDebug implies some entry.request
+        entry.logType = ResponseDebug implies some entry.response
+    }
+    
+    // Info logs have basic information
+    entry.level = Info implies {
+        entry.logType in Request + Response
+    }
+}
+
+pred validSession[session: APISession] {
+    // All requests in session must be valid
+    all req: session.requests | validRequest[req]
+    
+    // All responses in session must be valid  
+    all resp: session.responses | validResponse[resp]
+    
+    // All log entries must be valid
+    all entry: session.logs | validLogEntry[entry]
+    
+    // Session state must reflect actual usage
+    session.currentState.requestCount = #session.requests
+    session.currentState.totalTokens = sum resp: session.responses | resp.usage.totalTokens
+}
+
+// Cost calculation constraints
+pred accurateCostCalculation[usage: TokenUsage, cost: Int] {
+    // Cost calculation: input tokens * $0.00015/1k + output tokens * $0.0006/1k
+    // Converted to micro-dollars: input * 150 + output * 600 (per 1M tokens)
+    let inputCost = usage.promptTokens.mul[150].div[1000000] |
+    let outputCost = usage.candidatesTokens.mul[600].div[1000000] |
+    cost = inputCost.add[outputCost]
+}
+
+// Token limits
+fun maxTokens: Int { 8192 } // Gemini model token limit
+
+pred withinTokenLimits[usage: TokenUsage] {
+    usage.totalTokens =< maxTokens
+    usage.promptTokens =< maxTokens  
+    usage.candidatesTokens =< maxTokens
+}
+
+// Valid Gemini models
+fun geminiModels: set String {
+    // Abstract representation of valid model names
+    String // In practice: {"gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"}
+}
+
+// Request-response pairing
+pred requestResponsePair[req: RequestContext, resp: ResponseContext] {
+    // Response timing must be after request
+    resp.endTime > req.startTime
+    resp.duration = resp.endTime.sub[req.startTime]
+    
+    // Successful response implies valid token usage
+    resp.status = OK implies withinTokenLimits[resp.usage]
+}
+
+// Session evolution
+pred sessionEvolution[before: SessionState, after: SessionState, newUsage: TokenUsage, newCost: Int] {
+    // Session state updates monotonically
+    after.requestCount = before.requestCount.add[1]
+    after.totalTokens = before.totalTokens.add[newUsage.totalTokens]
+    after.totalCost = before.totalCost.add[newCost]
+}
+
+// Logging consistency
+pred loggingConsistency[session: APISession] {
+    // Every request should have corresponding log entries
+    all req: session.requests | {
+        some entry: session.logs | {
+            entry.logType in Request + RequestDebug
+            entry.request = req
+        }
+    }
+    
+    // Every response should have corresponding log entries
+    all resp: session.responses | {
+        some entry: session.logs | {
+            entry.logType in Response + ResponseDebug  
+            entry.response = resp
+        }
+    }
+}
+
+// Main invariant: Well-formed API session
+pred wellFormedSession[session: APISession] {
+    validSession[session]
+    loggingConsistency[session]
+    
+    // All token usage is within limits
+    all resp: session.responses | 
+        resp.status = OK implies withinTokenLimits[resp.usage]
+        
+    // Cost calculations are accurate
+    all resp: session.responses |
+        resp.status = OK implies {
+            some cost: Int | accurateCostCalculation[resp.usage, cost]
+        }
+}
+
+// Example scenario: Successful API interaction
+pred successfulInteraction {
+    some session: APISession, req: RequestContext, resp: ResponseContext | {
+        validRequest[req]
+        validResponse[resp]
+        resp.status = OK
+        requestResponsePair[req, resp]
+        
+        req in session.requests
+        resp in session.responses
+        wellFormedSession[session]
+    }
+}
+
+// Example scenario: Error handling
+pred errorHandling {
+    some session: APISession, req: RequestContext, resp: ResponseContext | {
+        validRequest[req]
+        resp.status in BadRequest + Unauthorized + TooManyRequests
+        requestResponsePair[req, resp]
+        
+        // Error responses may not have token usage
+        no resp.usage
+        
+        req in session.requests  
+        resp in session.responses
+        wellFormedSession[session]
+    }
+}
+
+// Check that successful interactions are possible
+run successfulInteraction for 5
+
+// Check that error handling works correctly  
+run errorHandling for 5
+
+// Check general well-formed sessions
+run wellFormedSession for 5
+
+// Assertions to verify
+assert tokenUsageConsistency {
+    all usage: TokenUsage | usage.totalTokens = usage.promptTokens.add[usage.candidatesTokens]
+}
+
+assert sessionStateMonotonic {
+    all before, after: SessionState, usage: TokenUsage, cost: Int |
+        sessionEvolution[before, after, usage, cost] implies {
+            after.requestCount >= before.requestCount
+            after.totalTokens >= before.totalTokens  
+            after.totalCost >= before.totalCost
+        }
+}
+
+assert validResponsesHaveUsage {
+    all resp: ResponseContext |
+        resp.status = OK implies some resp.usage
+}
+
+check tokenUsageConsistency for 10
+check sessionStateMonotonic for 10  
+check validResponsesHaveUsage for 10
