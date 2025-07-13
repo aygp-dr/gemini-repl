@@ -1,0 +1,48 @@
+name: Self-Host Testing
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  self-modification-test:
+    runs-on: ubuntu-latest
+    name: Test Self-Modification Capabilities
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Environment
+        run: |
+          npm ci
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+      
+      - name: Test Read Capability
+        run: |
+          # Test if the system can read its own source
+          node -e "
+          const fs = require('fs');
+          const src = fs.readFileSync('src/gemini_repl/core.cljs', 'utf8');
+          console.log('Source lines:', src.split('\\n').length);
+          "
+      
+      - name: Test Analysis Capability
+        run: |
+          # Future: Run self-analysis command
+          echo "Self-analysis test placeholder"
+      
+      - name: Generate Self-Report
+        run: |
+          echo "# Self-Host Test Report" > self-host-report.md
+          echo "Date: $(date)" >> self-host-report.md
+          echo "## Capabilities Tested" >> self-host-report.md
+          echo "- [ ] Read own source" >> self-host-report.md
+          echo "- [ ] Analyze structure" >> self-host-report.md
+          echo "- [ ] Suggest improvements" >> self-host-report.md
+          
+      - name: Upload Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: self-host-report
+          path: self-host-report.md

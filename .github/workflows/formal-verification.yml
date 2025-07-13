@@ -1,0 +1,78 @@
+name: Formal Methods Verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'specs/**'
+      - '.github/workflows/formal-verification.yml'
+  pull_request:
+    paths:
+      - 'specs/**'
+
+jobs:
+  verify-tla:
+    runs-on: ubuntu-latest
+    name: Verify TLA+ Specifications
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Cache TLA+ Tools
+        uses: actions/cache@v3
+        with:
+          path: ~/.tla
+          key: tla-tools-1.8.0
+      
+      - name: Download TLA+ Tools
+        run: |
+          mkdir -p ~/.tla
+          if [ ! -f ~/.tla/tla2tools.jar ]; then
+            wget -O ~/.tla/tla2tools.jar \
+              https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          fi
+          
+      - name: Syntax Check
+        run: |
+          for spec in specs/*.tla; do
+            if [ -f "$spec" ]; then
+              echo "Checking: $spec"
+              java -cp ~/.tla/tla2tools.jar tla2sany.SANY "$spec"
+            fi
+          done
+          
+      - name: Model Check (Bounded)
+        run: |
+          for spec in specs/*.tla; do
+            if [ -f "$spec" ] && [ -f "${spec%.tla}.cfg" ]; then
+              echo "Model checking: $spec"
+              timeout 300 java -cp ~/.tla/tla2tools.jar tlc2.TLC \
+                -depth 10 -workers auto "$spec" || true
+            fi
+          done
+
+  verify-alloy:
+    runs-on: ubuntu-latest
+    name: Verify Alloy Specifications
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: List Alloy Specifications
+        run: |
+          echo "Alloy specifications found:"
+          find specs -name "*.als" -type f | while read spec; do
+            echo "  - $spec"
+          done

@@ -1,0 +1,75 @@
+# Repository settings for GitHub
+repository:
+  name: gemini-repl
+  description: Self-hosting REPL for Google Gemini API with formal specifications
+  topics:
+    - clojurescript
+    - repl
+    - gemini-api
+    - formal-methods
+    - tla-plus
+    - alloy
+    - self-hosting
+  
+  private: false
+  has_issues: true
+  has_projects: true
+  has_wiki: false
+  has_downloads: true
+  
+  default_branch: main
+  
+  allow_squash_merge: true
+  allow_merge_commit: true
+  allow_rebase_merge: true
+  
+  delete_branch_on_merge: true
+  enable_automated_security_fixes: true
+  enable_vulnerability_alerts: true
+
+labels:
+  - name: bug
+    color: d73a4a
+    description: Something isn't working
+    
+  - name: enhancement
+    color: a2eeef
+    description: New feature or request
+    
+  - name: documentation
+    color: 0075ca
+    description: Improvements or additions to documentation
+    
+  - name: formal-methods
+    color: 7057ff
+    description: Related to TLA+ or Alloy specifications
+    
+  - name: self-hosting
+    color: 008672
+    description: Related to self-modification capabilities
+    
+  - name: change-request
+    color: fbca04
+    description: Significant change proposal
+    
+  - name: rfc
+    color: c5def5
+    description: Request for Comments
+    
+  - name: experiment
+    color: bfd4f2
+    description: Experimental feature or prototype
+
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "Verify TLA+ Specifications"
+          - "ClojureScript CI / test"
+      enforce_admins: false
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+      restrictions: null

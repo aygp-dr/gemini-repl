@@ -1,0 +1,76 @@
+name: ClojureScript CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Install Dependencies
+        run: npm ci
+      
+      - name: Run Linter
+        run: |
+          if [ -f "package.json" ] && grep -q "lint" package.json; then
+            npm run lint
+          else
+            echo "No lint script found"
+          fi
+      
+      - name: Run Tests
+        run: |
+          if [ -f "package.json" ] && grep -q "test" package.json; then
+            npm test
+          else
+            echo "No test script found"
+          fi
+      
+      - name: Build Release
+        run: |
+          if [ -f "shadow-cljs.edn" ]; then
+            npx shadow-cljs release repl
+          else
+            echo "No shadow-cljs configuration found"
+          fi
+
+  mise-en-place:
+    runs-on: ubuntu-latest
+    name: Workspace Check
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Documentation
+        run: |
+          echo "=== Documentation Status ==="
+          for doc in README.md README.org SETUP.org; do
+            if [ -f "$doc" ]; then
+              echo "✓ $doc exists"
+            else
+              echo "✗ $doc missing"
+            fi
+          done
+          
+      - name: Check Specifications
+        run: |
+          echo "=== Specification Files ==="
+          find specs -name "*.tla" -o -name "*.als" | sort

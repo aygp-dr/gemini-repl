@@ -1,0 +1,57 @@
+name: Change Request
+description: Propose a significant change to the system
+title: "[CR] "
+labels: ["change-request", "discussion"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for significant architectural or design changes.
+
+  - type: input
+    id: cr-number
+    attributes:
+      label: CR Number
+      placeholder: "CR-001"
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: Background and Motivation
+      description: Why is this change needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed Design
+      description: Detailed design of the change
+      value: |
+        ## Architecture Changes
+        
+        ## Specification Updates
+        
+        ## Implementation Plan
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and Mitigations
+      description: What could go wrong?
+
+  - type: textarea
+    id: success
+    attributes:
+      label: Success Criteria
+      description: How will we know this is successful?
+      value: |
+        - [ ] All tests pass
+        - [ ] Specifications verified
+        - [ ] Performance targets met

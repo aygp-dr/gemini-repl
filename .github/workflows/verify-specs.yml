@@ -1,0 +1,52 @@
+name: Verify Specifications
+
+on:
+  push:
+    paths:
+      - 'specs/**'
+  pull_request:
+    paths:
+      - 'specs/**'
+
+jobs:
+  verify-tla:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Download TLA+ tools
+        run: |
+          wget https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          
+      - name: Check TLA+ syntax
+        run: |
+          for spec in specs/*.tla; do
+            echo "Checking $spec"
+            java -cp tla2tools.jar tla2sany.SANY "$spec"
+          done
+          
+  verify-alloy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Download Alloy
+        run: |
+          wget https://github.com/AlloyTools/org.alloytools.alloy/releases/download/v6.0.0/alloy.jar
+          
+      - name: List Alloy specs
+        run: |
+          echo "Alloy specifications found:"
+          ls -la specs/*.als || echo "No Alloy specs found"

@@ -1,0 +1,58 @@
+name: Feature Request
+description: Suggest an idea for this project
+title: "[FEATURE] "
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your feature suggestion!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem?
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe alternatives you've considered
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      options:
+        - New Command
+        - Tool Calling
+        - Self-Hosting
+        - API Integration
+        - Formal Specifications
+        - Developer Experience
+    validations:
+      required: true
+
+  - type: checkbox
+    id: specs
+    attributes:
+      label: Specification Impact
+      description: Will this require specification updates?
+      options:
+        - label: This feature requires TLA+ specification updates
+        - label: This feature requires Alloy model updates
+        - label: This feature requires new formal properties
