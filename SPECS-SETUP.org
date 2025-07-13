@@ -1,0 +1,460 @@
+#+TITLE: Formal Methods Tooling Setup
+#+AUTHOR: jwalsh
+#+DATE: 2025-07-13
+#+PROPERTY: header-args:shell :results output :mkdirp yes
+
+* Overview
+
+This document sets up TLA+, Alloy, and related formal methods tools for the Gemini REPL project on FreeBSD.
+
+Prerequisites already installed:
+- OpenJDK 17
+- VS Code
+- Clojure
+
+* Tool Installation
+
+** Create Directory Structure
+
+#+begin_src shell :dir ~/
+mkdir -p ~/tools/formal-methods
+mkdir -p ~/bin
+echo "Created directories for formal methods tools"
+#+end_src
+
+** Download TLA+ Tools
+
+#+begin_src shell :dir ~/tools/formal-methods
+# TLA+ tools version 1.8.0
+echo "Downloading TLA+ tools..."
+fetch -o tla2tools.jar \
+  https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+
+# TLA+ Toolbox (GUI) - Optional
+echo "Downloading TLA+ Toolbox..."
+fetch -o TLAToolbox-1.8.0-linux.gtk.x86_64.zip \
+  https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/TLAToolbox-1.8.0-linux.gtk.x86_64.zip
+
+echo "TLA+ tools downloaded"
+ls -la *.jar *.zip
+#+end_src
+
+** Download Alloy Analyzer
+
+#+begin_src shell :dir ~/tools/formal-methods
+# Alloy 6.0.0
+echo "Downloading Alloy..."
+fetch -o alloy.jar \
+  https://github.com/AlloyTools/org.alloytools.alloy/releases/download/v6.0.0/alloy.jar
+
+echo "Alloy downloaded"
+ls -la alloy.jar
+#+end_src
+
+** Download Additional Verification Tools
+
+#+begin_src shell :dir ~/tools/formal-methods
+# Spin model checker (for Promela)
+echo "Installing Spin from packages..."
+sudo pkg install -y spin
+
+# Z3 theorem prover (useful for many formal methods tools)
+echo "Installing Z3..."
+sudo pkg install -y z3
+
+# SMT-LIB tools
+echo "Installing CVC4..."
+sudo pkg install -y cvc4
+#+end_src
+
+* Wrapper Scripts
+
+** TLA+ Command Line Tools
+
+#+begin_src shell :tangle ~/bin/tlc :shebang #!/bin/sh
+# TLC Model Checker
+exec java -XX:+UseParallelGC -Xmx4G \
+  -cp ~/tools/formal-methods/tla2tools.jar \
+  tlc2.TLC "$@"
+#+end_src
+
+#+begin_src shell :tangle ~/bin/tla2sany :shebang #!/bin/sh
+# TLA+ Syntax Analyzer
+exec java -cp ~/tools/formal-methods/tla2tools.jar \
+  tla2sany.SANY "$@"
+#+end_src
+
+#+begin_src shell :tangle ~/bin/pcal :shebang #!/bin/sh
+# PlusCal Translator
+exec java -cp ~/tools/formal-methods/tla2tools.jar \
+  pcal.trans "$@"
+#+end_src
+
+#+begin_src shell :tangle ~/bin/tla2tex :shebang #!/bin/sh
+# TLA+ to LaTeX converter
+exec java -cp ~/tools/formal-methods/tla2tools.jar \
+  tla2tex.TLA "$@"
+#+end_src
+
+** Alloy Wrapper
+
+#+begin_src shell :tangle ~/bin/alloy :shebang #!/bin/sh
+# Alloy Analyzer
+exec java -Xmx4G -jar ~/tools/formal-methods/alloy.jar "$@"
+#+end_src
+
+** Specification Runner
+
+#+begin_src shell :tangle ~/bin/check-specs :shebang #!/bin/sh
+# Run all specifications in the current project
+SPEC_DIR="${1:-specs}"
+
+echo "=== Checking TLA+ Specifications ==="
+for spec in "$SPEC_DIR"/*.tla; do
+    if [ -f "$spec" ]; then
+        echo "Checking: $spec"
+        tla2sany "$spec"
+        if [ $? -eq 0 ]; then
+            echo "✓ Syntax OK"
+        else
+            echo "✗ Syntax errors found"
+        fi
+        echo ""
+    fi
+done
+
+echo "=== Checking Alloy Specifications ==="
+for spec in "$SPEC_DIR"/*.als; do
+    if [ -f "$spec" ]; then
+        echo "Checking: $spec"
+        # Alloy doesn't have a command-line checker, just report presence
+        echo "✓ Found (run 'alloy $spec' to check)"
+        echo ""
+    fi
+done
+#+end_src
+
+** Make Scripts Executable
+
+#+begin_src shell :dir ~/bin
+chmod +x tlc tla2sany pcal tla2tex alloy check-specs
+echo "Made wrapper scripts executable"
+ls -la tlc tla2sany pcal tla2tex alloy check-specs
+#+end_src
+
+* Emacs Configuration
+
+** TLA+ Mode
+
+#+begin_src emacs-lisp :tangle ~/.emacs.d/lisp/tla-config.el :mkdirp yes
+;;; tla-config.el --- TLA+ configuration for Emacs
+
+;; TLA+ mode
+(use-package tla-mode
+  :straight (:host github :repo "ratish-punnoose/tla-mode")
+  :mode ("\\.tla\\'" . tla-mode)
+  :config
+  (setq tla-mode-formatter-jar-path "~/tools/formal-methods/tla2tools.jar")
+  
+  ;; Key bindings
+  (define-key tla-mode-map (kbd "C-c C-c") 'tla-run-tlc)
+  (define-key tla-mode-map (kbd "C-c C-s") 'tla-run-sany))
+
+;; Custom functions for TLA+
+(defun tla-run-sany ()
+  "Run SANY on the current TLA+ file."
+  (interactive)
+  (compile (format "tla2sany %s" (buffer-file-name))))
+
+(defun tla-run-tlc ()
+  "Run TLC on the current TLA+ file."
+  (interactive)
+  (compile (format "tlc %s" (buffer-file-name))))
+
+(provide 'tla-config)
+;;; tla-config.el ends here
+#+end_src
+
+** Alloy Mode
+
+#+begin_src emacs-lisp :tangle ~/.emacs.d/lisp/alloy-config.el :mkdirp yes
+;;; alloy-config.el --- Alloy configuration for Emacs
+
+;; Alloy mode
+(use-package alloy-mode
+  :straight t
+  :mode ("\\.als\\'" . alloy-mode)
+  :config
+  (setq alloy-analyzer-jar-path "~/tools/formal-methods/alloy.jar")
+  
+  ;; Key bindings
+  (define-key alloy-mode-map (kbd "C-c C-a") 'alloy-run-analyzer))
+
+;; Custom function to run Alloy
+(defun alloy-run-analyzer ()
+  "Open current file in Alloy Analyzer."
+  (interactive)
+  (async-shell-command 
+   (format "alloy %s" (buffer-file-name))))
+
+(provide 'alloy-config)
+;;; alloy-config.el ends here
+#+end_src
+
+** Load Configuration
+
+#+begin_src emacs-lisp :tangle ~/.emacs.d/init-formal-methods.el
+;;; init-formal-methods.el --- Initialize formal methods support
+
+;; Add to load path
+(add-to-list 'load-path "~/.emacs.d/lisp")
+
+;; Load configurations
+(require 'tla-config)
+(require 'alloy-config)
+
+;; Org-babel support for TLA+
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '((shell . t)
+   (emacs-lisp . t)))
+
+;; Custom org-babel execute for TLA+
+(defun org-babel-execute:tla (body params)
+  "Execute a block of TLA+ code with org-babel."
+  (let* ((tmp-file (org-babel-temp-file "tla-" ".tla"))
+         (cmdline (or (cdr (assoc :cmdline params)) "")))
+    (with-temp-file tmp-file
+      (insert body))
+    (org-babel-eval
+     (format "tla2sany %s %s" cmdline tmp-file) "")))
+
+(provide 'init-formal-methods)
+;;; init-formal-methods.el ends here
+#+end_src
+
+* VS Code Extensions
+
+** Install Extensions Script
+
+#+begin_src shell :tangle ~/bin/install-vscode-formal-extensions :shebang #!/bin/sh
+echo "Installing VS Code extensions for formal methods..."
+
+# TLA+ extension
+code --install-extension alygin.vscode-tlaplus
+
+# Alloy extension  
+code --install-extension ArturWierzbicki.alloy
+
+# Z3 extension (SMT-LIB support)
+code --install-extension rx-mind.vscode-z3
+
+# Promela/Spin support
+code --install-extension dsvictor94.promela
+
+echo "VS Code extensions installed"
+#+end_src
+
+#+begin_src shell :dir ~/bin
+chmod +x install-vscode-formal-extensions
+#+end_src
+
+* Project-Specific Configuration
+
+** TLA+ Configuration File
+
+#+begin_src text :tangle specs/.tlacfg :mkdirp yes
+# TLA+ project configuration
+SPECIFICATION interfaces
+INVARIANT TypeInvariant
+PROPERTY Liveness
+CONSTANTS
+  Commands = {"/help", "/exit", "/quit", "/clear", "/history"}
+  Prompts = {"Hello", "What is AI?", "Explain quantum computing"}
+  APIKey = "test-key"
+#+end_src
+
+** Alloy Configuration
+
+#+begin_src text :tangle specs/alloy.properties :mkdirp yes
+# Alloy project settings
+solver=sat4j
+skolem_depth=1
+symmetry_breaking=20
+unrolls=5
+#+end_src
+
+* Verification Workflows
+
+** Makefile for Specifications
+
+#+begin_src makefile :tangle specs/Makefile :mkdirp yes
+# Makefile for formal specifications
+
+.PHONY: all check-syntax check-tla check-alloy clean
+
+TLA_SPECS := $(wildcard *.tla)
+ALLOY_SPECS := $(wildcard *.als)
+
+all: check-syntax
+
+check-syntax: check-tla check-alloy
+
+check-tla: $(TLA_SPECS)
+	@echo "=== Checking TLA+ Specifications ==="
+	@for spec in $(TLA_SPECS); do \
+		echo "Checking $$spec..."; \
+		tla2sany $$spec || exit 1; \
+	done
+	@echo "✓ All TLA+ specs passed syntax check"
+
+check-alloy: $(ALLOY_SPECS)
+	@echo "=== Alloy Specifications ==="
+	@for spec in $(ALLOY_SPECS); do \
+		echo "Found: $$spec"; \
+	done
+	@echo "Run 'make run-alloy SPEC=<filename>' to check a specific spec"
+
+run-tlc:
+	@if [ -z "$(SPEC)" ]; then \
+		echo "Usage: make run-tlc SPEC=<filename>"; \
+		exit 1; \
+	fi
+	tlc $(SPEC)
+
+run-alloy:
+	@if [ -z "$(SPEC)" ]; then \
+		echo "Usage: make run-alloy SPEC=<filename>"; \
+		exit 1; \
+	fi
+	alloy $(SPEC)
+
+clean:
+	rm -f *.old *.tex *.dvi *.pdf
+	rm -rf states/
+#+end_src
+
+** GitHub Actions Workflow
+
+#+begin_src yaml :tangle .github/workflows/verify-specs.yml :mkdirp yes
+name: Verify Specifications
+
+on:
+  push:
+    paths:
+      - 'specs/**'
+  pull_request:
+    paths:
+      - 'specs/**'
+
+jobs:
+  verify-tla:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Download TLA+ tools
+        run: |
+          wget https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          
+      - name: Check TLA+ syntax
+        run: |
+          for spec in specs/*.tla; do
+            echo "Checking $spec"
+            java -cp tla2tools.jar tla2sany.SANY "$spec"
+          done
+          
+  verify-alloy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Download Alloy
+        run: |
+          wget https://github.com/AlloyTools/org.alloytools.alloy/releases/download/v6.0.0/alloy.jar
+          
+      - name: List Alloy specs
+        run: |
+          echo "Alloy specifications found:"
+          ls -la specs/*.als || echo "No Alloy specs found"
+#+end_src
+
+* Usage Examples
+
+** Quick Reference
+
+#+begin_src org :tangle SPECS-QUICKREF.org
+#+TITLE: Formal Specifications Quick Reference
+
+* TLA+ Commands
+
+| Command     | Purpose                        | Example                    |
+|-------------+--------------------------------+----------------------------|
+| tla2sany    | Check syntax                   | tla2sany specs/api.tla     |
+| tlc         | Run model checker              | tlc specs/api.tla          |
+| pcal        | Translate PlusCal to TLA+      | pcal algorithm.tla         |
+| tla2tex     | Convert to LaTeX               | tla2tex pretty.tla         |
+
+* Alloy Commands  
+
+| Command | Purpose            | Example                |
+|---------+--------------------+------------------------|
+| alloy   | Open GUI analyzer  | alloy specs/state.als  |
+
+* Project Commands
+
+| Command      | Purpose                    | Example            |
+|--------------+----------------------------+--------------------|
+| check-specs  | Verify all specifications  | check-specs        |
+| make check   | Run all checks             | cd specs && make   |
+
+* Common TLA+ Patterns
+
+** Safety Property
+#+begin_src tla
+Safety == []TypeInvariant
+#+end_src
+
+** Liveness Property  
+#+begin_src tla
+Liveness == <>(state = "completed")
+#+end_src
+
+** Fairness
+#+begin_src tla
+Fairness == WF_vars(Next)
+#+end_src
+#+end_src
+
+* Setup Completion
+
+** Final Setup Steps
+
+#+begin_src shell :results output
+echo "=== Formal Methods Setup Status ==="
+echo ""
+echo "Tools installed:"
+which tlc && echo "✓ TLC (TLA+ model checker)"
+which tla2sany && echo "✓ TLA2SANY (TLA+ syntax checker)"
+which alloy && echo "✓ Alloy"
+which spin && echo "✓ Spin"
+which z3 && echo "✓ Z3"
+echo ""
+echo "Add to your shell profile:"
+echo 'export PATH=$HOME/bin:$PATH'
+echo ""
+echo "For Emacs, add to init.el:"
+echo "(load \"~/.emacs.d/init-formal-methods.el\")"
+#+end_src
