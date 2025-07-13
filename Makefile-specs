@@ -1,0 +1,35 @@
+# Makefile for running formal specifications
+
+.PHONY: all tla alloy check-specs clean
+
+# Default target
+all: check-specs
+
+# Check all TLA+ specifications
+tla:
+	@echo "Checking TLA+ specifications..."
+	@for spec in specs/*.tla; do \
+		echo "Checking $$spec..."; \
+		tla2sany $$spec || exit 1; \
+	done
+	@echo "All TLA+ specifications are syntactically correct"
+
+# Run TLA+ model checking (example for interfaces.tla)
+tla-check:
+	@echo "Running TLC model checker on interfaces.tla..."
+	cd specs && tlc interfaces.tla -config ../model.cfg
+
+# Open Alloy analyzer
+alloy:
+	@echo "Opening Alloy analyzer..."
+	alloy specs/state.alloy &
+
+# Check all specifications
+check-specs: tla
+	@echo "All specification checks passed"
+
+# Clean generated files
+clean:
+	@echo "Cleaning generated files..."
+	@find specs -name "*.old" -delete
+	@find specs -name "*.toolbox" -type d -exec rm -rf {} +
