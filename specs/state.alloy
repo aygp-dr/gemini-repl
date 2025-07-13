@@ -1,0 +1,57 @@
+module GeminiREPLState
+
+sig Session {
+    history: seq Message,
+    config: one Configuration,
+    state: one SessionState
+}
+
+sig Configuration {
+    apiKey: one APIKey,
+    model: one Model,
+    temperature: one Int,
+    maxTokens: one Int
+} {
+    temperature >= 0 and temperature <= 10  // 0.0 to 1.0 * 10
+    maxTokens > 0 and maxTokens <= 4096
+}
+
+abstract sig Message {}
+sig UserInput extends Message {
+    content: one String
+}
+sig APIResponse extends Message {
+    response: one String,
+    status: one Status
+}
+
+abstract sig Status {}
+one sig Success, Error, RateLimited extends Status {}
+
+sig APIKey {}
+sig Model {}
+sig String {}
+
+abstract sig SessionState {}
+one sig Active, Inactive, Error extends SessionState {}
+
+// Commands are special user inputs starting with "/"
+sig Command extends UserInput {} {
+    content.startsWith["/"]
+}
+
+pred validSession[s: Session] {
+    s.config.apiKey != none
+}
+
+pred sendMessage[s, s': Session, input: UserInput] {
+    s.state = Active
+    s'.history = s.history.add[input]
+    s'.config = s.config
+}
+
+assert NoEmptyHistory {
+    all s: Session | s.state = Active => #s.history > 0
+}
+
+run {} for 5

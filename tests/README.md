@@ -1,0 +1,10 @@
+# Tests
+
+Property-based tests derived from formal specifications.
+
+## Test Categories
+
+- Unit tests for individual components
+- Integration tests for component interactions
+- Property tests based on TLA+ invariants
+- Contract tests for API client
