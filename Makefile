@@ -249,11 +249,11 @@ distclean: clean
 # Release targets
 release: release-patch
 
-release-patch: _release-bump-patch _release-create
+release-patch: _release-precheck _release-bump-patch _release-create
 
-release-minor: _release-bump-minor _release-create
+release-minor: _release-precheck _release-bump-minor _release-create
 
-release-major: _release-bump-major _release-create
+release-major: _release-precheck _release-bump-major _release-create
 
 # Internal release helpers
 _release-bump-patch:
@@ -268,7 +268,7 @@ _release-bump-major:
 	@echo "📦 Bumping major version..."
 	@npm version major --no-git-tag-version
 
-_release-create: _release-precheck build test lint
+_release-create: build test lint
 	@echo "🚀 Creating release..."
 	@VERSION=$$(node -p "require('./package.json').version"); \
 	echo "📋 Version: $$VERSION"; \
