@@ -17,9 +17,9 @@ while true; do
     
     # Memory usage
     mem_info=$(free -m | awk 'NR==2{printf "%.0f %.0f %.0f", $3, $2, ($3/$2)*100}')
-    mem_used=$(echo $mem_info | cut -d' ' -f1)
-    mem_total=$(echo $mem_info | cut -d' ' -f2)
-    mem_percent=$(echo $mem_info | cut -d' ' -f3)
+    mem_used=$(echo "$mem_info" | cut -d' ' -f1)
+    mem_total=$(echo "$mem_info" | cut -d' ' -f2)
+    mem_percent=$(echo "$mem_info" | cut -d' ' -f3)
     
     printf "MEM:  "
     awk -v val="$mem_percent" 'BEGIN { 
@@ -30,9 +30,9 @@ while true; do
     
     # Disk usage
     disk_info=$(df -h / | awk 'NR==2{print $5 " " $3 " " $2}' | sed 's/%//')
-    disk_percent=$(echo $disk_info | cut -d' ' -f1)
-    disk_used=$(echo $disk_info | cut -d' ' -f2)
-    disk_total=$(echo $disk_info | cut -d' ' -f3)
+    disk_percent=$(echo "$disk_info" | cut -d' ' -f1)
+    disk_used=$(echo "$disk_info" | cut -d' ' -f2)
+    disk_total=$(echo "$disk_info" | cut -d' ' -f3)
     
     printf "DISK: "
     awk -v val="$disk_percent" 'BEGIN { 

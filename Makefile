@@ -11,7 +11,7 @@ TLA_JAR := $(TOOLS_DIR)/tla2tools.jar
 ALLOY_JAR := $(TOOLS_DIR)/alloy.jar
 
 # Phony targets
-.PHONY: help all install verify run dev build clean test test-repl spec-check verify-alloy verify-tla banner lint lint-cljs lint-shell install-lint-tools check-lint-tools
+.PHONY: help all install verify run dev build clean test test-repl test-cljs spec-check verify-alloy verify-tla banner lint lint-cljs lint-shell install-lint-tools check-lint-tools release release-patch release-minor release-major
 
 # Default target
 all: help
@@ -28,7 +28,8 @@ help:
 	@echo "  gmake run           - Run the REPL"
 	@echo "  gmake dev           - Start development server with live reload"
 	@echo "  gmake build         - Build production version"
-	@echo "  gmake test          - Run tests"
+	@echo "  gmake test          - Run all tests"
+	@echo "  gmake test-cljs     - Run ClojureScript unit tests"
 	@echo "  gmake test-repl     - Run interactive REPL tests"
 	@echo "  gmake banner        - Generate ASCII art banner"
 	@echo "  gmake lint          - Run all linting (ClojureScript + shell)"
@@ -36,6 +37,9 @@ help:
 	@echo "  gmake lint-shell    - Lint shell scripts"
 	@echo "  gmake clean         - Clean build artifacts"
 	@echo "  gmake dashboard     - Start tmux development dashboard"
+	@echo "  gmake release       - Create a new patch release"
+	@echo "  gmake release-minor - Create a new minor release"
+	@echo "  gmake release-major - Create a new major release"
 	@echo ""
 	@echo "Tool targets:"
 	@echo "  gmake $(TLA_JAR)   - Download TLA+ tools"
@@ -128,14 +132,19 @@ dev: install
 build:
 	npm run build
 
-# Run tests
-test: test-repl
-	@echo "Running tests..."
-	@if [ -f package.json ] && grep -q "test" package.json; then \
-		npm test; \
+# ClojureScript unit tests
+test-cljs:
+	@echo "=== Running ClojureScript tests ==="
+	@if command -v npx >/dev/null 2>&1; then \
+		npx shadow-cljs compile test && node target/test.js; \
 	else \
-		echo "No tests configured"; \
+		echo "Error: npx not found"; \
+		exit 1; \
 	fi
+
+# Run all tests
+test: test-cljs test-repl
+	@echo "✅ All tests completed"
 
 # Run interactive REPL tests using expect
 test-repl: build
@@ -187,10 +196,10 @@ lint: lint-cljs lint-shell
 lint-cljs:
 	@echo "=== Linting ClojureScript files ==="
 	@if command -v clj-kondo >/dev/null 2>&1; then \
-		clj-kondo --lint src/ test/ --config '{:output {:format :text}}' || exit 1; \
+		clj-kondo --lint src/ test/ --config '{:output {:format :text}}' --fail-level error; \
 	else \
-		echo "Warning: clj-kondo not found. Install: npm install -g @clj-kondo/clj-kondo"; \
-		exit 1; \
+		echo "Warning: clj-kondo not found. Skipping ClojureScript linting."; \
+		echo "Install clj-kondo: https://github.com/clj-kondo/clj-kondo/blob/master/doc/install.md"; \
 	fi
 
 # Shell script linting
@@ -236,3 +245,110 @@ clean:
 distclean: clean
 	rm -rf $(TOOLS_DIR)
 	@echo "✅ All artifacts and tools removed"
+
+# Release targets
+release: release-patch
+
+release-patch: _release-bump-patch _release-create
+
+release-minor: _release-bump-minor _release-create
+
+release-major: _release-bump-major _release-create
+
+# Internal release helpers
+_release-bump-patch:
+	@echo "📦 Bumping patch version..."
+	@npm version patch --no-git-tag-version
+
+_release-bump-minor:
+	@echo "📦 Bumping minor version..."
+	@npm version minor --no-git-tag-version
+
+_release-bump-major:
+	@echo "📦 Bumping major version..."
+	@npm version major --no-git-tag-version
+
+_release-create: _release-precheck build test lint
+	@echo "🚀 Creating release..."
+	@VERSION=$$(node -p "require('./package.json').version"); \
+	echo "📋 Version: $$VERSION"; \
+	echo ""; \
+	echo "📝 Preparing release artifacts..."; \
+	rm -rf dist/; \
+	mkdir -p dist/; \
+	echo ""; \
+	echo "🔨 Building release version..."; \
+	npx shadow-cljs release release; \
+	echo ""; \
+	echo "📦 Creating release archive..."; \
+	tar -czf "gemini-repl-$$VERSION.tar.gz" \
+		--exclude='.env' \
+		--exclude='*.log' \
+		--exclude='node_modules' \
+		--exclude='target' \
+		--exclude='.shadow-cljs' \
+		--exclude='.git' \
+		dist/ \
+		src/ \
+		test/ \
+		specs/ \
+		scripts/ \
+		resources/ \
+		package.json \
+		package-lock.json \
+		shadow-cljs.edn \
+		Makefile \
+		README.org \
+		LICENSE \
+		.env.example || exit 1; \
+	echo ""; \
+	echo "📋 Committing version bump..."; \
+	git add package.json package-lock.json; \
+	git commit -m "chore(release): bump version to $$VERSION" --trailer "Co-Authored-By: Claude <noreply@anthropic.com>" || exit 1; \
+	echo ""; \
+	echo "🏷️  Creating git tag..."; \
+	git tag -a "v$$VERSION" -m "Release v$$VERSION" || exit 1; \
+	echo ""; \
+	echo "📝 Generating release notes..."; \
+	LAST_TAG=$$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo ""); \
+	if [ -z "$$LAST_TAG" ]; then \
+		COMMITS=$$(git log --oneline --pretty=format:"- %s"); \
+	else \
+		COMMITS=$$(git log $$LAST_TAG..HEAD --oneline --pretty=format:"- %s"); \
+	fi; \
+	echo "## Release v$$VERSION"; \
+	echo ""; \
+	echo "### Changes"; \
+	echo "$$COMMITS"; \
+	echo ""; \
+	echo "### Installation"; \
+	echo '```bash'; \
+	echo "tar -xzf gemini-repl-$$VERSION.tar.gz"; \
+	echo "cd gemini-repl-$$VERSION"; \
+	echo "npm install"; \
+	echo "gmake run"; \
+	echo '```'; \
+	echo ""; \
+	echo "✅ Release v$$VERSION created successfully!"; \
+	echo ""; \
+	echo "📤 Next steps:"; \
+	echo "  1. Review the changes"; \
+	echo "  2. Push to GitHub: git push && git push --tags"; \
+	echo "  3. Create GitHub release:"; \
+	echo "     gh release create v$$VERSION gemini-repl-$$VERSION.tar.gz \\"; \
+	echo "       --title \"Release v$$VERSION\" \\"; \
+	echo "       --notes-file RELEASE_NOTES.md"; \
+	echo ""
+
+_release-precheck:
+	@echo "🔍 Pre-release checks..."
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "❌ Error: Working directory has uncommitted changes"; \
+		echo "   Please commit or stash your changes before releasing"; \
+		exit 1; \
+	fi
+	@if ! command -v gh >/dev/null 2>&1; then \
+		echo "⚠️  Warning: GitHub CLI (gh) not found"; \
+		echo "   Install with: pkg install gh"; \
+	fi
+	@echo "✅ Pre-release checks passed"

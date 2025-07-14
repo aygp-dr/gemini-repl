@@ -43,6 +43,19 @@
       (is (number? result))
       (is (>= result 0)))))
 
+(deftest test-confidence-indicator
+  (testing "confidence-indicator with high confidence"
+    (is (= "🟢" (core/confidence-indicator -0.01))))  ; ~99% confidence
+  
+  (testing "confidence-indicator with medium confidence"  
+    (is (= "🟡" (core/confidence-indicator -0.2))))   ; ~82% confidence
+  
+  (testing "confidence-indicator with low confidence"
+    (is (= "🔴" (core/confidence-indicator -1.0))))   ; ~37% confidence
+  
+  (testing "confidence-indicator with nil input"
+    (is (nil? (core/confidence-indicator nil)))))
+
 (deftest test-extract-token-usage
   (testing "extract-token-usage with valid body"
     (let [body #js {"usageMetadata" #js {"promptTokenCount" 100

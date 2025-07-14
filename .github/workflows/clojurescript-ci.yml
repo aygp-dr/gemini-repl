@@ -28,21 +28,16 @@ jobs:
       - name: Install Dependencies
         run: npm ci
       
-      - name: Run Linter
+      - name: Install Linting Tools
         run: |
-          if [ -f "package.json" ] && grep -q "lint" package.json; then
-            npm run lint
-          else
-            echo "No lint script found"
-          fi
+          npm install -g @clj-kondo/clj-kondo
+          sudo apt-get update && sudo apt-get install shellcheck
       
       - name: Run Tests
-        run: |
-          if [ -f "package.json" ] && grep -q "test" package.json; then
-            npm test
-          else
-            echo "No test script found"
-          fi
+        run: gmake test-cljs
+      
+      - name: Run Linter
+        run: gmake lint
       
       - name: Build Release
         run: |

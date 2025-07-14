@@ -17,7 +17,7 @@ while true; do
     echo ""
     echo -n "Select: "
     
-    read -n1 choice
+    read -r -n1 choice
     echo ""
     
     case $choice in
@@ -31,19 +31,19 @@ while true; do
             echo "Running tests..."
             npm test
             echo "Press any key to continue..."
-            read -n1
+            read -r -n1
             ;;
         3)
             echo "Checking specifications..."
             gmake verify
             echo "Press any key to continue..."
-            read -n1
+            read -r -n1
             ;;
         4)
             echo "Building production..."
             gmake build
             echo "Press any key to continue..."
-            read -n1
+            read -r -n1
             ;;
         5)
             echo "Creating issue..."
@@ -53,17 +53,17 @@ while true; do
             echo "Running mise-en-place..."
             gmake verify && git status
             echo "Press any key to continue..."
-            read -n1
+            read -r -n1
             ;;
         7)
             gh issue list
             echo "Press any key to continue..."
-            read -n1
+            read -r -n1
             ;;
         8)
             git status
             echo "Press any key to continue..."
-            read -n1
+            read -r -n1
             ;;
         9)
             echo "Starting dev server in pane 0..."

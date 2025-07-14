@@ -1,0 +1,21 @@
+repos:
+  - repo: local
+    hooks:
+      - id: clojurescript-test
+        name: ClojureScript Tests
+        entry: gmake test-cljs
+        language: system
+        files: \.(cljs|cljc)$
+        pass_filenames: false
+      - id: clojurescript-lint
+        name: ClojureScript Linting
+        entry: gmake lint-cljs
+        language: system
+        files: \.(cljs|cljc)$
+        pass_filenames: false
+      - id: shell-lint
+        name: Shell Script Linting  
+        entry: gmake lint-shell
+        language: system
+        files: \.sh$
+        pass_filenames: false

@@ -91,12 +91,22 @@
              {:total-tokens (+ (:total-tokens state) (:total-tokens token-usage))
               :total-cost (+ (:total-cost state) estimated-cost)}))))
 
-(defn display-response-with-metadata [text token-usage estimated-cost duration]
+(defn confidence-indicator [logprob]
+  (when logprob
+    (let [confidence (* 100 (js/Math.exp logprob))]
+      (cond
+        (> confidence 95) "🟢"
+        (> confidence 80) "🟡"
+        :else "🔴"))))
+
+(defn display-response-with-metadata [text token-usage estimated-cost duration logprob]
   (println (str "\n" text))
   (when (get-env "GEMINI_SHOW_METADATA")
     (println)
     (println "─────────────────────────────")
     (when token-usage
+      (when-let [indicator (confidence-indicator logprob)]
+        (print (str indicator " ")))
       (print (str "📊 " (:total-tokens token-usage) " tokens"))
       (when estimated-cost (print (str " | 💰 $" (.toFixed estimated-cost 6))))
       (when duration (print (str " | ⏱️ " duration "ms")))
@@ -151,7 +161,13 @@
                                              (aget 0)
                                              (aget "text"))
                                     token-usage (extract-token-usage body)
-                                    estimated-cost (calculate-estimated-cost token-usage)]
+                                    estimated-cost (calculate-estimated-cost token-usage)
+                                    logprob (try
+                                              (-> body
+                                                  (aget "candidates")
+                                                  (aget 0)
+                                                  (aget "avgLogprobs"))
+                                              (catch js/Error _e nil))]
                                 
                                 ;; Update session state
                                 (update-session-usage token-usage estimated-cost)
@@ -180,7 +196,8 @@
                                 (callback nil {:text text
                                               :token-usage token-usage
                                               :estimated-cost estimated-cost
-                                              :duration duration}))
+                                              :duration duration
+                                              :logprob logprob}))
                               (catch js/Error e
                                 (callback e nil)))))))))]
       (.on req "error" (fn [err] (callback err nil)))
@@ -240,7 +257,8 @@
                         (:text result)
                         (:token-usage result)
                         (:estimated-cost result)
-                        (:duration result))))
+                        (:duration result)
+                        (:logprob result))))
                   (println)
                   (.prompt rl)))))))
 

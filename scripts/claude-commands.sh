@@ -6,7 +6,7 @@ COMMAND_DIR=".claude/commands"
 
 list_commands() {
     echo "Available Claude commands:"
-    for cmd in $COMMAND_DIR/*.md; do
+    for cmd in "$COMMAND_DIR"/*.md; do
         basename "$cmd" .md | sed 's/^/  \//'
     done
 }

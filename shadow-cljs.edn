@@ -1,4 +1,4 @@
-{:source-paths ["src"]
+{:source-paths ["src" "test"]
  :dependencies [[org.clojure/clojurescript "1.11.60"]
                 [org.clojure/core.async "1.6.673"]]
  :builds
@@ -12,4 +12,9 @@
   {:target :node-script
    :output-to "dist/gemini-repl.js"
    :main gemini-repl.core/main
-   :compiler-options {:optimizations :advanced}}}}
+   :compiler-options {:optimizations :advanced}}
+  
+  :test
+  {:target :node-test
+   :output-to "target/test.js"
+   :ns-regexp ".*-test$"}}}

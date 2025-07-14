@@ -20,7 +20,7 @@ check_tool alloy
 echo "Checking TLA+ specifications..."
 for spec in specs/*.tla; do
     if [ -f "$spec" ]; then
-        echo -n "  Checking $(basename "$spec")... "
+        printf "  Checking %s... " "$(basename "$spec")"
         if tla2sany "$spec" >/dev/null 2>&1; then
             echo "✓"
         else
