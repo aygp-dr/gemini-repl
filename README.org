@@ -27,6 +27,110 @@ An interactive console application for the Google Gemini API with formal specifi
 - =tests/= - Property-based tests
 - =docs/= - Documentation
 
+* Features
+
+** Current Features
+
+*** Core REPL Functionality
+- Interactive console for Gemini API interactions
+- Slash commands (=/help=, =/exit=, =/clear=, =/stats=, =/debug=)
+- Session state tracking with token usage and cost estimation
+- Environment-based configuration
+
+*** Enhanced UI (NEW!)
+- **🔹 Confidence Indicators**: Visual feedback on response quality
+  - 🟢 High confidence (>95%)
+  - 🟡 Medium confidence (>80%)
+  - 🔴 Low confidence (≤80%)
+- **📊 Response Metadata**: Detailed information when =GEMINI_SHOW_METADATA=true=
+  - Token usage and costs
+  - Response timing
+  - Session totals
+- **📝 Comprehensive Logging**: FIFO and file logging with configurable levels
+
+*** Development Infrastructure
+- **🧪 Testing**: Unit tests for core functionality (=gmake test-cljs=)
+- **🔍 Linting**: ClojureScript (clj-kondo) and shell script linting
+- **🚀 CI/CD**: GitHub Actions for automated testing and linting
+- **📦 Release Management**: Automated versioning and release creation
+
+** Configuration
+
+Set these environment variables to customize behavior:
+
+#+BEGIN_SRC bash
+# Required
+export GEMINI_API_KEY="your-api-key"
+
+# Optional UI settings
+export GEMINI_SHOW_METADATA=true     # Show response metadata
+export GEMINI_MODEL=gemini-2.0-flash # Model selection
+export GEMINI_TEMPERATURE=0.9        # Response creativity
+export GEMINI_MAX_TOKENS=2048        # Max response length
+
+# Logging configuration
+export GEMINI_LOG_ENABLED=true       # Enable logging
+export GEMINI_LOG_TYPE=both          # fifo, file, or both
+export GEMINI_LOG_LEVEL=debug        # debug or info
+#+END_SRC
+
+** Quick Start
+
+#+BEGIN_SRC bash
+# Install dependencies
+gmake install
+
+# Run tests
+gmake test
+
+# Start REPL
+gmake run
+
+# Development mode with hot reload
+gmake dev
+#+END_SRC
+
+** Future Work: Self-Hosting Experimentation Platform 🚀
+
+*** Vision
+Transform the REPL into a self-improving system that can modify its own code through experimentation.
+
+*** Planned Features (Issue #43)
+
+**** 🧪 Git Worktree Experiments
+- Create isolated experiments: =/experiment new <name>=
+- Switch between experiments: =/experiment switch <name>=
+- Test and merge successful changes
+
+**** 🐕 Dogfooding Mode
+- Enable with =/dogfood= command
+- REPL can modify its own source code
+- Hot-reload changes automatically
+- AI-assisted feature development
+
+**** 📚 Research Documentation
+- =/research new <topic>= - Create research documents
+- =/research log <finding>= - Track experimental results
+- Automatic org-mode documentation
+
+**** Example Workflow
+#+BEGIN_SRC
+> /experiment new ui-enhancement "Add color themes"
+🧪 Creating experiment: ui-enhancement
+
+> /dogfood
+🐕 Dogfooding mode enabled!
+
+> Add a dark theme option to the REPL
+[REPL modifies its own code...]
+✅ Feature added! Try /theme dark
+
+> /research log "Dark theme reduces eye strain in terminal"
+📝 Finding logged
+#+END_SRC
+
+This speculative feature represents the ultimate goal: a REPL that evolves through self-experimentation.
+
 * Formal Methods
 
 This project uses formal specifications to define system behavior before implementation.
