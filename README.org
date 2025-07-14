@@ -33,7 +33,7 @@ An interactive console application for the Google Gemini API with formal specifi
 
 *** Core REPL Functionality
 - Interactive console for Gemini API interactions
-- Slash commands (=/help=, =/exit=, =/clear=, =/stats=, =/debug=)
+- Slash commands (=/help=, =/exit=, =/clear=, =/stats=, =/debug=, =/context=)
 - Session state tracking with token usage and cost estimation
 - Environment-based configuration
 
@@ -43,6 +43,7 @@ An interactive console application for the Google Gemini API with formal specifi
 - =/clear= - Clear the screen
 - =/stats= - Show session usage statistics
 - =/debug= - Toggle debug logging
+- =/context= - Show conversation context (messages in history)
 
 *** UI Example
 
@@ -107,15 +108,25 @@ gmake run
 
 # Development with live reload
 gmake dev
+gmake dashboard      # Start tmux development dashboard
 
 # Testing
-gmake test-cljs
+gmake test          # Run all tests (unit + interactive)
+gmake test-cljs     # Run ClojureScript unit tests only
+gmake test-repl     # Run interactive REPL tests only
 
 # Linting
-gmake lint
+gmake lint          # Run all linting checks
+gmake check-lint-tools  # Check if linting tools are installed
+
+# Cleaning
+gmake clean         # Clean build artifacts
+gmake distclean     # Deep clean including downloaded tools
 
 # Create release
-gmake release-minor
+gmake release       # Create a new patch release
+gmake release-minor # Create a new minor release
+gmake release-major # Create a new major release
 #+END_SRC
 
 ** Configuration
@@ -158,4 +169,4 @@ gmake dev
 * Formal Methods
 
 This project uses formal specifications to define system behavior before implementation.
-See =specs/README.md= for details.
+See =specs/README.org= for details.
