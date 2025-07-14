@@ -1,6 +1,4 @@
 {:source-paths ["src" "test"]
- :dependencies [[org.clojure/clojurescript "1.11.60"]
-                [org.clojure/core.async "1.6.673"]]
  :builds
  {:repl
   {:target :node-script

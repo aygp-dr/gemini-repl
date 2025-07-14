@@ -1,0 +1,139 @@
+#+TITLE: Research: Telemetry Integration for Gemini REPL
+#+AUTHOR: Research Analysis
+#+DATE: 2025-07-14
+
+* Executive Summary
+
+Investigation into integrating OpenTelemetry (OTel) support for the Gemini REPL, leveraging existing infrastructure with =OTEL_*= environment variables already configured. Focus on instrumenting API calls, session metrics, and performance monitoring.
+
+* Background
+
+The target deployment environment (FreeBSD 14.3) already has comprehensive telemetry infrastructure configured via direnv, including:
+
+- =OTEL_EXPORTER_OTLP_ENDPOINT=
+- =OTEL_EXPORTER_OTLP_PROTOCOL= 
+- =OTEL_METRICS_EXPORTER=
+- =OTEL_METRIC_EXPORT_INTERVAL=
+
+This presents an opportunity to integrate standardized observability into the REPL system.
+
+* Research Questions
+
+1. How to integrate OpenTelemetry with ClojureScript/Node.js applications?
+2. What metrics are most valuable for REPL and LLM interactions?
+3. How to instrument Gemini API calls for distributed tracing?
+4. What security considerations exist for telemetry data?
+
+* Environment Analysis
+
+** Current OTel Configuration
+#+BEGIN_SRC bash
+OTEL_EXPORTER_OTLP_ENDPOINT=<configured>
+OTEL_EXPORTER_OTLP_PROTOCOL=<configured>
+OTEL_METRICS_EXPORTER=<configured>
+OTEL_METRIC_EXPORT_INTERVAL=<configured>
+#+END_SRC
+
+** Infrastructure Context
+- FreeBSD 14.3-RELEASE host system
+- Node.js runtime environment
+- ClojureScript compilation target
+- Existing comprehensive monitoring stack
+
+* Technical Investigation
+
+** OpenTelemetry Node.js Integration
+- =@opentelemetry/api= - Core API package
+- =@opentelemetry/sdk-node= - Node.js SDK
+- =@opentelemetry/auto-instrumentations-node= - Automatic instrumentation
+- ClojureScript interop via =:require= statements
+
+** Proposed Metrics Schema
+*** Session Metrics
+- =gemini.session.duration= - Session length
+- =gemini.session.messages.count= - Messages per session
+- =gemini.session.tokens.total= - Token usage
+- =gemini.session.cost.total= - API cost estimation
+
+*** API Metrics  
+- =gemini.api.request.duration= - Request latency
+- =gemini.api.request.tokens.input= - Input tokens
+- =gemini.api.request.tokens.output= - Output tokens
+- =gemini.api.request.status= - Response status
+
+*** REPL Metrics
+- =gemini.repl.commands.executed= - Slash commands usage
+- =gemini.repl.errors.count= - Error frequency
+- =gemini.repl.memory.conversations= - Context size
+
+** Distributed Tracing
+- Trace Gemini API calls end-to-end
+- Correlate user inputs with API responses
+- Track conversation context propagation
+- Monitor tool calling execution (future)
+
+* Security Considerations
+
+** Data Sensitivity
+- API keys must NOT be included in telemetry
+- User prompts require sanitization
+- Response content needs filtering
+- PII detection and redaction
+
+** Telemetry Security
+- Encrypted transport to OTel collector
+- Access controls on telemetry data
+- Retention policies for sensitive metrics
+- Audit logging for telemetry access
+
+* Implementation Plan
+
+** Phase 1: Basic Integration
+1. Add OpenTelemetry dependencies to =package.json=
+2. Initialize OTel SDK in ClojureScript
+3. Instrument existing logging points
+4. Verify metrics export to existing collector
+
+** Phase 2: Enhanced Metrics
+1. Add comprehensive API call instrumentation
+2. Implement session-level metrics collection
+3. Create custom metrics for REPL operations
+4. Add performance monitoring dashboards
+
+** Phase 3: Advanced Features
+1. Distributed tracing for complex operations
+2. Custom spans for conversation context
+3. Tool calling instrumentation (future)
+4. Anomaly detection integration
+
+* Related Work
+
+** Similar Projects
+- OpenAI API monitoring patterns
+- LangChain telemetry integration
+- Anthropic Claude observability examples
+
+** Industry Standards
+- OpenTelemetry semantic conventions
+- LLM observability best practices
+- AI system monitoring frameworks
+
+* Recommendations
+
+1. *Immediate*: Investigate OTel Node.js SDK compatibility with current build
+2. *Short-term*: Implement basic API call instrumentation
+3. *Medium-term*: Add comprehensive session and performance metrics
+4. *Long-term*: Integrate with existing monitoring dashboards
+
+* References
+
+- [[https://opentelemetry.io/docs/languages/js/][OpenTelemetry JavaScript Documentation]]
+- [[https://www.npmjs.com/package/@opentelemetry/sdk-node][OTel Node.js SDK]]
+- [[https://opentelemetry.io/docs/specs/semconv/][OpenTelemetry Semantic Conventions]]
+- [[https://github.com/open-telemetry/opentelemetry-js][OpenTelemetry JavaScript Repository]]
+
+* TODO Tasks
+** TODO Evaluate OTel package compatibility with Shadow-CLJS
+** TODO Design telemetry data sanitization pipeline  
+** TODO Create proof-of-concept instrumentation
+** TODO Document integration with existing OTel infrastructure

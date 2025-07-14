@@ -1,0 +1,62 @@
+#+TITLE: Telemetry Research Sources
+#+AUTHOR: Research Analysis  
+#+DATE: 2025-07-14
+
+* Primary Sources
+
+** OpenTelemetry Documentation
+- [[https://opentelemetry.io/docs/languages/js/][OpenTelemetry JavaScript Documentation]]
+- [[https://opentelemetry.io/docs/specs/semconv/][Semantic Conventions]]
+- [[https://opentelemetry.io/docs/concepts/observability-primer/][Observability Primer]]
+
+** Node.js Integration
+- [[https://www.npmjs.com/package/@opentelemetry/sdk-node][OTel Node.js SDK on npm]]
+- [[https://github.com/open-telemetry/opentelemetry-js][OpenTelemetry JavaScript Repository]]
+- [[https://opentelemetry.io/docs/languages/js/getting-started/nodejs/][Node.js Getting Started Guide]]
+
+** ClojureScript Interop
+- [[https://clojurescript.org/guides/ns-forms][ClojureScript Namespace Forms]]
+- [[https://shadow-cljs.github.io/docs/UsersGuide.html#_calling_library_functions][Shadow-CLJS Library Integration]]
+
+* Secondary Sources
+
+** LLM Observability Patterns
+- LangChain observability documentation
+- OpenAI API monitoring examples
+- Anthropic Claude usage analytics
+
+** Industry Best Practices
+- Google Cloud AI Platform monitoring
+- AWS Bedrock observability patterns
+- Azure OpenAI telemetry integration
+
+* Environment Context
+
+** Existing Infrastructure Evidence
+#+BEGIN_SRC bash
+# From SSH session direnv output:
+OTEL_EXPORTER_OTLP_ENDPOINT=<endpoint>
+OTEL_EXPORTER_OTLP_PROTOCOL=<protocol>  
+OTEL_METRICS_EXPORTER=<exporter>
+OTEL_METRIC_EXPORT_INTERVAL=<interval>
+#+END_SRC
+
+** System Context
+- FreeBSD 14.3-RELEASE
+- Comprehensive monitoring stack already deployed
+- Standard OTLP export configuration
+- Production-ready telemetry infrastructure
+
+* Research Gaps
+
+** Areas Needing Investigation
+1. ClojureScript + OTel integration examples
+2. LLM-specific telemetry patterns
+3. Security sanitization for AI telemetry
+4. Performance impact of instrumentation
+
+** Questions for Further Research
+1. Does Shadow-CLJS compilation affect OTel SDK?
+2. What's the overhead of comprehensive instrumentation?
+3. How to handle async API calls in traces?
+4. Best practices for LLM cost/token tracking?
