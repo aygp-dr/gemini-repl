@@ -855,3 +855,18 @@ Document in gemini-repl-002/:
 - Lessons for methodology refinement
 
 This is experimental computer science - we're testing if AI development can be made reproducible.
+
+** V2 PREPARATION (2025-07-14)
+Session prompts for preparing v2 experimental validation:
+
+1. User: "knowing this is my test process update GEMINI-REPL-PROMPTS.org appropriately. i'll deal with it in 002"
+   → Updated file with comprehensive testing protocol for gemini-repl-002
+   → Added experimental hypothesis and scientific contribution sections
+   → Documented methodology effectiveness confirmation
+
+2. User: "...that's about four hours of work away :D just add the new prompts for v2 and the prompts used to generate while i suffer through rebuilding :D"
+   → Acknowledged 4-hour development cycle for full reproduction
+   → Added this v2 preparation section to track latest prompts
+   → Committed changes with git notes for complete documentation
+
+Context: User confirmed methodology is "actually working" and preparing for experimental validation in gemini-repl-002.
