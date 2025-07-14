@@ -1,0 +1,50 @@
+{
+  "context_test": {
+    "questions": [
+      {
+        "q": "What is the project name and main purpose?",
+        "a": ["Gemini REPL", "ClojureScript REPL for Google Gemini API"]
+      },
+      {
+        "q": "What visual feature shows response confidence?",
+        "a": ["Confidence indicators", "🟢🟡🔴", "Color-coded indicators"]
+      },
+      {
+        "q": "What was the metadata display bug that was fixed?",
+        "a": ["Verbose multi-line format", "Too many lines", "Cluttered output"]
+      },
+      {
+        "q": "What major feature was just added to enable conversations?",
+        "a": ["Conversation context", "Multi-turn dialogue", "History tracking"]
+      },
+      {
+        "q": "What command shows the number of messages in context?",
+        "a": ["/context"]
+      },
+      {
+        "q": "What platform is this being developed on?",
+        "a": ["FreeBSD", "FreeBSD 14.3"]
+      },
+      {
+        "q": "What build tool is used instead of make?",
+        "a": ["gmake", "GNU make"]
+      },
+      {
+        "q": "What are the linting tools being used?",
+        "a": ["clj-kondo", "shellcheck"]
+      },
+      {
+        "q": "What is issue #43 about?",
+        "a": ["Self-hosting experimentation platform", "Git worktrees", "Dogfooding"]
+      },
+      {
+        "q": "What format is the compact metadata display?",
+        "a": ["[🟢 150 tokens | $0.0001 | 2.5s]", "Single-line bracketed"]
+      }
+    ]
+  },
+  "scoring": {
+    "passing": 8,
+    "total": 10
+  }
+}
