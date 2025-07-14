@@ -21,10 +21,10 @@
         (let [data (str (.stringify js/JSON (clj->js entry)) "\n")]
           (try
             (.appendFileSync fs fifo-path data)
-            (catch js/Error e
+            (catch js/Error _e
               ;; Silently ignore FIFO errors (no reader, etc.)
               nil)))
-        (catch js/Error e
+        (catch js/Error _e
           ;; Ignore errors to not disrupt REPL
           nil)))))
 
@@ -36,7 +36,7 @@
       (try
         (let [data (str (.stringify js/JSON (clj->js entry)) "\n")]
           (.appendFileSync fs log-path data))
-        (catch js/Error e
+        (catch js/Error _e
           ;; Ignore errors to not disrupt REPL
           nil)))))
 
@@ -71,7 +71,7 @@
       {:prompt-tokens (aget usage "promptTokenCount")
        :candidates-tokens (aget usage "candidatesTokenCount")
        :total-tokens (aget usage "totalTokenCount")})
-    (catch js/Error e nil)))
+    (catch js/Error _e nil)))
 
 (defn calculate-estimated-cost [token-usage]
   (when token-usage
@@ -90,6 +90,19 @@
            (fn [state]
              {:total-tokens (+ (:total-tokens state) (:total-tokens token-usage))
               :total-cost (+ (:total-cost state) estimated-cost)}))))
+
+(defn display-response-with-metadata [text token-usage estimated-cost duration]
+  (println (str "\n" text))
+  (when (get-env "GEMINI_SHOW_METADATA")
+    (println)
+    (println "─────────────────────────────")
+    (when token-usage
+      (print (str "📊 " (:total-tokens token-usage) " tokens"))
+      (when estimated-cost (print (str " | 💰 $" (.toFixed estimated-cost 6))))
+      (when duration (print (str " | ⏱️ " duration "ms")))
+      (println))
+    (let [session @session-state]
+      (println (str "Session: 📊 " (:total-tokens session) " total | 💰 $" (.toFixed (:total-cost session) 6) " total")))))
 
 (defn make-request [api-key prompt callback]
   (let [start-time (.now js/Date)
@@ -164,7 +177,10 @@
                                             :estimated-cost-usd estimated-cost
                                             :session @session-state})
                                 
-                                (callback nil text))
+                                (callback nil {:text text
+                                              :token-usage token-usage
+                                              :estimated-cost estimated-cost
+                                              :duration duration}))
                               (catch js/Error e
                                 (callback e nil)))))))))]
       (.on req "error" (fn [err] (callback err nil)))
@@ -216,7 +232,16 @@
                 (fn [err result]
                   (if err
                     (println "Error:" (.-message err))
-                    (println (str "\n" result "\n")))
+                    (if (string? result)
+                      ;; Handle legacy string result
+                      (println (str "\n" result "\n"))
+                      ;; Handle new metadata result
+                      (display-response-with-metadata 
+                        (:text result)
+                        (:token-usage result)
+                        (:estimated-cost result)
+                        (:duration result))))
+                  (println)
                   (.prompt rl)))))))
 
 (defn show-banner []
@@ -244,5 +269,5 @@
                (when-not (#{"/exit"} (.trim input))
                  (.prompt rl))))))))
 
-(defn ^:export -main [& args]
+(defn ^:export -main [& _args]
   (main))
