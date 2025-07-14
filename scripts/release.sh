@@ -86,7 +86,7 @@ else
     MAKE_CMD="make"
 fi
 
-$MAKE_CMD release-$RELEASE_TYPE
+$MAKE_CMD release-"$RELEASE_TYPE"
 
 # Get the new version
 VERSION=$(node -p "require('./package.json').version")
