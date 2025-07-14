@@ -11,3 +11,17 @@ target/
 .cpcache/
 tools/
 .shadow-cljs/
+
+# Build artifacts
+dist/
+*.tar.gz
+
+# Temporary directories
+tmp/
+
+# Release artifacts  
+gemini-repl-*.tar.gz
+
+# Session data (keep templates, ignore actual data)
+.ai/sessions/
+.ai/context/CLAUDE-context.md
