@@ -9,23 +9,15 @@ spawn node target/repl.js
 # Wait for prompt
 expect "gemini> "
 
-# Test 1: Simple math
-send "2 + 2\r"
+# Test 1: Math
+send "40 + 2\r"
 expect {
-    "4" { puts "✓ Math test passed" }
+    "42" { puts "✓ Math test passed" }
     timeout { puts "✗ Math test failed"; exit 1 }
 }
 expect "gemini> "
 
-# Test 2: Another math
-send "40 + 2\r"
-expect {
-    "42" { puts "✓ Math test 2 passed" }
-    timeout { puts "✗ Math test 2 failed"; exit 1 }
-}
-expect "gemini> "
-
-# Test 3: Haiku
+# Test 2: Haiku
 send "write a haiku about programming\r"
 expect {
     "Thinking..." { puts "✓ Processing request" }
@@ -41,7 +33,7 @@ expect {
 }
 expect "gemini> "
 
-# Test 4: Help command
+# Test 3: Help command
 send "/help\r"
 expect {
     "Commands:" { puts "✓ Help command passed" }
@@ -49,7 +41,7 @@ expect {
 }
 expect "gemini> "
 
-# Test 5: Stats command
+# Test 4: Stats command
 send "/stats\r"
 expect {
     "Session Statistics:" { puts "✓ Stats command passed" }

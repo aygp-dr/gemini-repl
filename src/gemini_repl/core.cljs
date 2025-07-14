@@ -63,7 +63,9 @@
   (.createInterface readline
     #js {:input (.-stdin process)
          :output (.-stdout process)
-         :prompt "gemini> "}))
+         :prompt "gemini> "
+         :terminal true
+         :historySize 100}))
 
 (defn extract-token-usage [body]
   (try
@@ -83,6 +85,9 @@
 
 ;; Session state for tracking cumulative usage
 (defonce session-state (atom {:total-tokens 0 :total-cost 0.0}))
+
+;; Conversation history for context
+(defonce conversation-history (atom []))
 
 (defn update-session-usage [token-usage estimated-cost]
   (when (and token-usage estimated-cost)
@@ -113,10 +118,18 @@
                     (when duration-str (str " | " duration-str))
                     "]")))))
 
+(defn separator []
+  nil)
+
 (defn make-request [api-key prompt callback]
+  ;; Add user message to history
+  (swap! conversation-history conj 
+         #js {:role "user" 
+              :parts #js [#js {:text prompt}]})
+  
   (let [start-time (.now js/Date)
         data (.stringify js/JSON
-               #js {:contents #js [#js {:parts #js [#js {:text prompt}]}]})
+               #js {:contents (clj->js @conversation-history)})
         options #js {:hostname "generativelanguage.googleapis.com"
                      :port 443
                      :path "/v1beta/models/gemini-2.0-flash:generateContent"
@@ -192,6 +205,11 @@
                                             :estimated-cost-usd estimated-cost
                                             :session @session-state})
                                 
+                                ;; Add assistant response to history
+                                (swap! conversation-history conj
+                                       #js {:role "model"
+                                            :parts #js [#js {:text text}]})
+                                
                                 (callback nil {:text text
                                               :token-usage token-usage
                                               :estimated-cost estimated-cost
@@ -212,6 +230,7 @@
               (println "  /clear  - Clear the screen")
               (println "  /debug  - Toggle debug logging")
               (println "  /stats  - Show session usage statistics")
+              (println "  /context - Show conversation context")
               (println "\nOr type any text to send to Gemini\n"))
     "/exit" (do
               (println "Goodbye!")
@@ -233,14 +252,19 @@
                  (println "\n📊 Session Statistics:")
                  (println (str "  Total tokens used: " (:total-tokens stats)))
                  (println (str "  Estimated cost: $" (.toFixed (:total-cost stats) 6)))
-                 (println (str "  Log level: " (get-log-level))))
+                 (println (str "  Log level: " (get-log-level)))
+                 (println))
                (.prompt rl))
+    "/context" (do
+                 (println "\n📜 Conversation Context:")
+                 (println (str "Messages: " (count @conversation-history)))
+                 (.prompt rl))
     (println (str "Unknown command: " cmd "\nType /help for commands"))))
 
 (defn handle-input [rl api-key input]
   (let [trimmed (.trim input)]
     (cond
-      (empty? trimmed) nil
+      (empty? trimmed) (.prompt rl)
       (str/starts-with? trimmed "/") (handle-command trimmed rl)
       :else (do
               (println "\nThinking...")
@@ -282,9 +306,7 @@
         (.prompt rl)
         (.on rl "line"
              (fn [input]
-               (handle-input rl api-key input)
-               (when-not (#{"/exit"} (.trim input))
-                 (.prompt rl))))))))
+               (handle-input rl api-key input)))))))
 
 (defn ^:export -main [& _args]
   (main))

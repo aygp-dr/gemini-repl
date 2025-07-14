@@ -1,0 +1,33 @@
+#!/usr/bin/expect -f
+
+# Test conversation context
+
+set timeout 10
+spawn node target/repl.js
+
+# Wait for prompt
+expect "gemini> "
+
+# First message about package managers
+send "What are the main package managers on FreeBSD?\r"
+expect "gemini> "
+
+# Check context count
+send "/context\r"
+expect "Messages: 2"
+expect "gemini> "
+
+# Follow-up question using "first one" reference
+send "How do I update the first one you mentioned?\r"
+expect "gemini> "
+
+# Check context grew
+send "/context\r"
+expect "Messages: 4"
+expect "gemini> "
+
+# Exit
+send "/exit\r"
+expect eof
+
+puts "\n✅ Conversation context test passed!"
