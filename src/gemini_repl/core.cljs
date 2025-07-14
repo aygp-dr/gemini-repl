@@ -236,7 +236,9 @@
               (println "Goodbye!")
               (.close rl)
               (.exit process 0))
-    "/clear" (.write (.-stdout process) "\u001b[2J\u001b[0;0H")
+    "/clear" (do
+               (.write (.-stdout process) "\u001b[2J\u001b[0;0H")
+               (.prompt rl))
     "/debug" (do
                (let [current-level (get-log-level)]
                  (if (= current-level "debug")
