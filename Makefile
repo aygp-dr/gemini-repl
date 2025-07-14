@@ -268,7 +268,7 @@ _release-bump-major:
 	@echo "📦 Bumping major version..."
 	@npm version major --no-git-tag-version
 
-_release-create: build test lint
+_release-create: build test-cljs lint
 	@echo "🚀 Creating release..."
 	@VERSION=$$(node -p "require('./package.json').version"); \
 	echo "📋 Version: $$VERSION"; \
