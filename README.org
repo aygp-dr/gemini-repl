@@ -48,6 +48,60 @@ An interactive console application for the Google Gemini API with formal specifi
   - Session totals
 - **📝 Comprehensive Logging**: FIFO and file logging with configurable levels
 
+*** UI Example
+
+#+BEGIN_SRC
+┏━╸┏━╸┏┳┓╻┏┓╻╻   ┏━┓┏━╸┏━┓╻  
+┃╺┓┣╸ ┃┃┃┃┃┗┫┃   ┣┳┛┣╸ ┣━┛┃  
+┗━┛┗━╸╹ ╹╹╹ ╹╹   ╹┗╸┗━╸╹  ┗━╸
+
+  🤖 Self-Hosting ClojureScript REPL
+  📝 Logging enabled via GEMINI_LOG_ENABLED
+  🔍 Type /help for commands
+
+gemini> What is recursion in programming?
+
+Thinking...
+
+Recursion in programming is a technique where a function calls itself to solve a problem by breaking it down into smaller, similar subproblems. It consists of two essential parts:
+
+1. **Base Case**: A condition that stops the recursion
+2. **Recursive Case**: The function calling itself with modified parameters
+
+Here's a simple example calculating factorial:
+
+```javascript
+function factorial(n) {
+  if (n <= 1) return 1;        // Base case
+  return n * factorial(n - 1);  // Recursive case
+}
+```
+
+[🟢 245 tokens | $0.0001 | 0.8s]
+
+gemini> /stats
+
+📊 Session Statistics
+─────────────────────
+Total tokens: 245
+Total cost: $0.000147
+Requests made: 1
+Average cost per request: $0.000147
+
+gemini> /help
+
+Commands:
+  /help   - Show this help
+  /exit   - Exit the REPL
+  /clear  - Clear the screen
+  /debug  - Toggle debug logging
+  /stats  - Show session usage statistics
+
+Or type any text to send to Gemini
+
+gemini> _
+#+END_SRC
+
 *** Development Infrastructure
 - **🧪 Testing**: Unit tests for core functionality (=gmake test-cljs=)
 - **🔍 Linting**: ClojureScript (clj-kondo) and shell script linting
