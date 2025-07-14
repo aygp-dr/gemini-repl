@@ -1,471 +1,358 @@
-#+TITLE: PROMPTS.org - Complete Generation History of Gemini REPL
-#+AUTHOR: jwalsh + Claude
+#+TITLE: PROMPTS.org - From-Scratch Development Template
+#+AUTHOR: jwalsh + Claude  
 #+DATE: 2025-07-14
 #+STARTUP: overview
 
-* Executive Summary
+* README: How to Use This Template
 
-This document provides comprehensive documentation of every prompt, decision, and generation step used to create the Gemini REPL project. The project represents a unique case study in AI-assisted software development featuring formal methods integration, literate programming, and systematic prompt tracking.
+This document serves as a *from-scratch development template* for creating AI-assisted software projects using the proven methodologies discovered in the Gemini REPL development process.
 
-** Key Statistics
-- *45+ documented commits* with prompt histories in git notes
-- *5 major setup .org files* generated and tangled
-- *Complete formal specifications* (TLA+ and Alloy) before implementation
-- *Self-hosting aspirations* with 3/10 current readiness
-- *100% prompt traceability* from vision to implementation
+** For Iterative Development
+Each iteration follows this pattern:
+1. Start with this template
+2. Document every prompt in real-time
+3. Track methodology discoveries
+4. Rebuild template with learnings
+5. Repeat for continuous improvement
 
-* Genesis: The Initial Vision
+** Core Philosophy
+#+BEGIN_QUOTE
+"Document every prompt, track every decision, enable perfect reproduction."
+#+END_QUOTE
 
-** The Original Concept
+* Phase 1: Initial Vision and Concept
+
+** The Three Foundation Prompts
+Every successful AI-assisted project begins with these three critical prompts:
+
+*** 1. Technology and Scope Definition
+#+BEGIN_SRC
+"I want to [DESCRIBE BASIC FUNCTIONALITY] using [TECHNOLOGY STACK] in a [FORMAT/INTERFACE] format"
+#+END_SRC
+
+*Example from Gemini REPL:*
 #+BEGIN_QUOTE
 "i want to have a simple, simple console app in clojurescript that just makes calls to curl [Gemini API endpoint] but in a repl-ish format"
 #+END_QUOTE
 
-** Interface Design Decision
+*** 2. User Interface and Interaction Design  
+#+BEGIN_SRC
+"The [COMMANDS/INTERFACE] should use [SPECIFIC PATTERN/STRUCTURE]"
+#+END_SRC
+
+*Example from Gemini REPL:*
 #+BEGIN_QUOTE
 "the exit and help commands should use a slash structure"
 #+END_QUOTE
 
-** Formal Methods Integration
-#+BEGIN_QUOTE
+*** 3. Development Methodology Decision
+#+BEGIN_SRC
+"I want to start by using [METHODOLOGY/APPROACH] to [ENSURE QUALITY/SAFETY/STRUCTURE]"
+#+END_SRC
+
+*Example from Gemini REPL:*
+#+BEGIN_QUOTE  
 "i want to start by using formal methods to describe the interfaces or expectations of the system"
 #+END_QUOTE
 
-This trilogy of prompts established:
-1. *Technology stack*: ClojureScript + Node.js
-2. *User interface*: Slash command structure
-3. *Development methodology*: Formal specifications first
+** Vision Documentation Template
+#+BEGIN_SRC org
+*** Project: [PROJECT NAME]
+*** Technology Stack: [LANGUAGES/FRAMEWORKS/TOOLS]
+*** Interface Type: [CLI/WEB/API/DESKTOP]
+*** Quality Approach: [TESTING/FORMAL-METHODS/TDD/BDD]
+*** Success Criteria: [WHAT CONSTITUTES SUCCESS]
+#+END_SRC
 
-* Literate Programming Phase: The .org File Generation
+* Phase 2: Literate Programming and Structure Generation
 
-** SETUP.org - Foundation Generation
-*** The Trigger Prompt
-#+BEGIN_QUOTE
+** The .org File Generation Pattern
+The most powerful pattern discovered: *generate comprehensive project structure through literate programming files*.
+
+** Setup File Generation Sequence
+*** 1. SETUP.org - Foundation
+#+BEGIN_SRC
 "show a SETUP.org that just builds out those initial files"
-#+END_QUOTE
-
-*** Generated Content
-- Project directory structure (=specs/=, =src/=, =tests/=, =docs/=)
-- Formal specifications scaffolding (TLA+ and Alloy)
-- Comprehensive requirements document
-- Initial ClojureScript configuration
-
-*** Methodology Established
-This prompt established the literate programming pattern where:
-1. Generate .org file with complete project structure
-2. Tangle (extract) actual files from org blocks
-3. Remove .org file after successful tangling
-4. Document the generation process in git notes
-
-** SPECS-SETUP.org - Formal Methods Tooling
-*** Context Discovery Prompt
-#+BEGIN_QUOTE
-"what tools do i need to use tla and alloy on freebsd"
-#+END_QUOTE
-
-*** Final Generation Prompt
-#+BEGIN_QUOTE
-"create SPECS-TOOLING.org" (renamed to SPECS-SETUP.org)
-#+END_QUOTE
-
-*** Generated Infrastructure
-- TLA+ installation for FreeBSD 14.3
-- Alloy analyzer setup and configuration
-- Verification pipeline integration
-- Formal methods development workflow
-
-** NODE-SETUP.org - Development Environment
-*** Generation Context
-Generated proactively after Node.js installation was detected in the environment.
-
-*** Generated Content
-- Complete ClojureScript development environment
-- Shadow-CLJS configuration with hot reload
-- REPL implementation with readline support
-- Build and development tooling
-
-** GITHUB-SETUP.org - CI/CD and Project Management
-*** Minimal Trigger Prompt
-#+BEGIN_QUOTE
-"show GITHUB-SETUP.org"
-#+END_QUOTE
-
-*** Generated Infrastructure
-- GitHub Actions workflows for formal verification
-- Issue templates for bugs, features, and RFCs
-- Pull request templates with checklists
-- Release automation workflows
-
-** SHARED-SETUP.org - Project Management Structure
-*** Specific Request Prompt
-#+BEGIN_QUOTE
-"i want a SHARED-SETUP.org that creates directories for change-requests/ experiments/ and research/"
-#+END_QUOTE
-
-*** Generated Content
-- Claude command system integration
-- Project management directory structure
-- Research and experimentation frameworks
-- Adapted from defrecord/shared-infrastructure patterns
-
-* Implementation Phase: Feature Development Prompts
-
-** Core REPL Implementation
-*** API Integration Prompts
-#+BEGIN_SRC clojure
-;; Generated from prompts about Gemini API integration
-(defn make-request [api-key prompt callback]
-  ;; HTTPS integration with proper error handling
-  ;; Token usage tracking and cost estimation
-  ;; Conversation context management
-  )
 #+END_SRC
 
-*** Command System Development
-Slash commands implemented through iterative prompts:
-- =/help= - Basic help system
-- =/stats= - Session usage statistics  
-- =/debug= - Toggle debug logging
-- =/context= - Show conversation history
-- =/clear= - Screen clearing functionality
+*Purpose:* Create complete project directory structure, initial configurations, and scaffolding.
 
-** UI Enhancement Examples
-*** Metadata Display Optimization
-**** Issue Creation Prompt
-#+BEGIN_QUOTE
-"add a gh issue for this trivial change: ## Bug Report: Metadata Display Too Verbose"
-#+END_QUOTE
-
-**** Implementation Prompt
-#+BEGIN_QUOTE
-"implement that change" (referring to issue #44)
-#+END_QUOTE
-
-**** Result
-Compact single-line metadata display: =[🟢 245 tokens | $0.0001 | 0.8s]=
-
-*** Conversation Context Feature
-**** Request Prompt
-#+BEGIN_QUOTE
-"ok, smallest possible change to implement that then run through some simple tests"
-#+END_QUOTE
-
-**** Implementation Details
-- 18 lines of code for full conversation history
-- =/context= command implementation
-- Comprehensive test plan for multi-turn dialogues
-
-* Formal Specifications: TLA+ and Alloy Integration
-
-** TLA+ Specifications Generated
-*** API Client Behavior (=api_client.tla=)
-- State machine for API requests
-- Error handling and retry logic
-- Rate limiting considerations
-
-*** Command Processing (=commands.tla=)
-- Slash command parsing and validation
-- State transitions for REPL operations
-- User input sanitization requirements
-
-*** Interface Definitions (=interfaces.tla=)
-- Module interactions and dependencies
-- Data flow specifications
-- Safety and liveness properties
-
-** Alloy Models Created
-*** Structural Validation (=gemini_api.alloy=)
-- API request/response structure
-- Data type constraints
-- Relationship modeling
-
-*** State Management (=state.alloy=)
-- Session state invariants
-- Conversation context constraints
-- Memory management properties
-
-* Development Methodology Documentation
-
-** Systematic Session Tracking
-Every development session documented with prompts in git notes:
-
-*** Recent Session Example (2025-07-14)
+*** 2. [TECH]-SETUP.org - Technology Environment
 #+BEGIN_SRC
-Session prompts used:
-- /mise-en-place: Comprehensive workspace cleanup and documentation review
-- /security-review: Security analysis revealing API key logging issues 
-- /self-analyze: Capability assessment showing 3/10 self-hosting readiness
-- /research telemetry: OpenTelemetry integration investigation
-- Issue lifecycle: Reopened #50, #18 → applied documented fix → verified → closed
+"create [TECHNOLOGY]-SETUP.org for [SPECIFIC ENVIRONMENT/PLATFORM]"
 #+END_SRC
 
-** Commit Convention Established
-*** Format Requirements
-- Conventional commits with detailed scope
-- =--trailer= for co-author attribution
-- No 'generated with' language in commit bodies
-- Comprehensive change documentation
+*Purpose:* Development environment, build tools, language-specific configuration.
 
-*** Example Commit Structure
+*** 3. [INFRASTRUCTURE]-SETUP.org - Supporting Systems
 #+BEGIN_SRC
-fix(build): remove explicit shadow-cljs dependencies to eliminate warnings
-
-- Remove org.clojure/clojurescript and core.async from shadow-cljs.edn
-- Shadow-cljs manages these dependencies internally for compatibility
-- Clean builds now show 0 warnings instead of dependency override messages
-
-Co-Authored-By: Claude <noreply@anthropic.com>
+"show [INFRASTRUCTURE]-SETUP.org"
 #+END_SRC
 
-** Issue Tracking Methodology
-*** Sociopathic Tracking Pattern
-1. Create issue for every change, however trivial
-2. Document implementation approach
-3. Verify with testing pipeline
-4. Close with detailed resolution notes
-5. Reference in commit messages
+*Purpose:* CI/CD, GitHub integration, project management, documentation systems.
 
-*** Example Issue Lifecycle
+*** 4. SHARED-SETUP.org - Cross-Project Infrastructure
 #+BEGIN_SRC
-gh issue create → implement → test → commit → close with notes
+"i want a SHARED-SETUP.org that creates directories for [PROJECT MANAGEMENT STRUCTURE] as well as [TOOL INTEGRATIONS]"
 #+END_SRC
 
-* Advanced Features and Experimental Development
+*Purpose:* Reusable infrastructure, command systems, research frameworks.
 
-** Self-Hosting Vision
-*** Speculative Feature Prompt
-#+BEGIN_QUOTE
-"add a speculative feature for the following but don't implement it: Excellent idea! Let's transform your REPL into a self-hosting experimentation platform using git worktrees"
-#+END_QUOTE
-
-*** Proposed Capabilities
-- Git worktree integration for isolated experiments
-- Self-modification via Gemini API with safety constraints
-- Automatic research documentation generation
-- Formal verification of self-modifications
-
-** Capability Assessment (/self-analyze)
-*** Current State Analysis
-- *Self-hosting readiness*: 3/10
-- *Tool calling*: Not yet implemented
-- *File system access*: Limited to logging
-- *Code modification*: Static compilation barriers
-
-*** Growth Roadmap Identified
-1. Tool calling framework (Priority 1)
-2. File system interface (Priority 2)  
-3. Self-modification engine (Priority 3)
-4. Enhanced context management (Priority 4)
-5. Security hardening (Priority 5)
-
-** Research Integration (/research)
-*** Telemetry Investigation Example
-**** Discovery Context
+** Tangling and Cleanup Process
 #+BEGIN_SRC bash
-# Existing OTEL infrastructure detected:
-OTEL_EXPORTER_OTLP_ENDPOINT=<configured>
-OTEL_EXPORTER_OTLP_PROTOCOL=<configured>
-OTEL_METRICS_EXPORTER=<configured>
+# For each .org file:
+1. Generate .org file with AI assistance
+2. Review and validate structure
+3. Tangle (extract) actual files from org blocks
+4. Test generated structure
+5. Remove .org file after successful extraction
+6. Commit with detailed git notes
 #+END_SRC
 
-**** Research Outcomes
-- OpenTelemetry Node.js integration patterns
-- Metrics schema for REPL and LLM interactions
-- Security considerations for telemetry data
-- Infrastructure compatibility analysis
+* Phase 3: Systematic Development with Issue Tracking
 
-* Security and Quality Assurance
+** Issue-Driven Development Pattern
+Every change, however small, follows this pattern:
 
-** Security Review Process (/security-review)
-*** Comprehensive Analysis Conducted
-1. *Authentication & Authorization*: Environment-based API key management
-2. *Data Validation*: Input sanitization requirements identified
-3. *Cryptography*: HTTPS-only API communication verified
-4. *Common Vulnerabilities*: Path traversal and injection vectors assessed
-5. *Environment Security*: File permissions and logging security
+*** 1. Issue Creation
+#+BEGIN_SRC
+"add a gh issue for [DESCRIPTION] then [IMPLEMENTATION INSTRUCTION]"
+#+END_SRC
 
-*** Critical Findings and Resolutions
-**** False Alarm: API Key Exposure
-- *Initial panic*: "CRITICAL! API KEY IN PLAINTEXT!"
-- *Reality check*: Local development environment, .env properly gitignored
-- *Lesson*: Security reviews must consider deployment context
+*** 2. Implementation
+#+BEGIN_SRC
+"implement that change" OR "ok, smallest possible change to implement that"
+#+END_SRC
 
-**** Actual Issues Identified
-- API keys logged in debug mode (sanitization needed)
-- Log file path validation required
-- Input sanitization for prompt injection prevention
+*** 3. Verification
+#+BEGIN_SRC
+"gmake lint test verify" OR project-specific validation commands
+#+END_SRC
 
-** Quality Pipeline Established
-*** Verification Sequence
+*** 4. Closure
+#+BEGIN_SRC
+Close issue with detailed implementation notes and verification results
+#+END_SRC
+
+** Git Workflow Template
 #+BEGIN_SRC bash
-gmake lint    # ClojureScript and shell script linting
-gmake test    # Unit tests and ClojureScript compilation
-gmake verify  # TLA+ and Alloy specification verification
+# Every commit follows this pattern:
+git add [files]
+git commit -m "[type]([scope]): [description]
+
+- [Detail 1]
+- [Detail 2]
+- [Verification steps]
+
+Closes #[issue]" --trailer "Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# Always add git notes:
+git notes add -m "Session prompts used:
+- [Prompt 1]: [Context and outcome]
+- [Prompt 2]: [Context and outcome]
+- [Summary of session achievements]"
 #+END_SRC
 
-*** Pre-commit Validation
-- Automated workspace checks
-- TODO/FIXME detection
-- Lint and test execution before commits
+* Phase 4: Quality Assurance and Formal Methods
 
-* Prompt Templates and Reusable Patterns
+** Formal Specification Integration
+*** When to Add Formal Methods
+- Critical system behavior
+- Safety-critical operations  
+- Complex state management
+- API contracts and interfaces
 
-** Command Development Pattern
+*** TLA+ Specification Pattern
 #+BEGIN_SRC
-/[command-name] [specific-request]
-→ Analyze current state
-→ Implement minimal viable change
-→ Test thoroughly
-→ Document in git notes
-→ Create/close related issues
+"can you create a spec for the [SYSTEM COMPONENT] of the [PROJECT]"
 #+END_SRC
 
-** Issue Creation Template
+*** Alloy Model Pattern  
 #+BEGIN_SRC
-gh issue create --title "[type]([scope]): [description]" 
-                --label "[labels]" 
-                --body "[detailed description with context]"
+"create an alloy model for [STRUCTURAL VALIDATION] of [COMPONENT]"
 #+END_SRC
 
-** Research Documentation Pattern
+** Verification Pipeline
+#+BEGIN_SRC makefile
+# Standard verification targets:
+verify: verify-tla verify-alloy
+lint: lint-code lint-scripts
+test: test-unit test-integration
+build: compile package
+#+END_SRC
+
+* Phase 5: Advanced Features and Self-Hosting
+
+** Command System Development
+*** Slash Command Pattern
+#+BEGIN_SRC
+"add /[command] command that [FUNCTIONALITY]"
+#+END_SRC
+
+*** Help System
+#+BEGIN_SRC
+"implement /help command showing all available commands"
+#+END_SRC
+
+** Self-Analysis and Capability Assessment
+*** Regular Self-Assessment
+#+BEGIN_SRC
+"/self-analyze"
+#+END_SRC
+
+*Purpose:* Document current capabilities, limitations, and growth opportunities.
+
+** Research Integration
+*** Systematic Research Documentation
+#+BEGIN_SRC
+"/research [topic]"
+#+END_SRC
+
+*Structure:*
 #+BEGIN_SRC
 research/[topic]/
 ├── README.org         # Overview and findings
-├── sources.org        # Bibliography and references
-├── notes/            # Detailed investigation notes
-└── findings.md       # Key insights and recommendations
+├── sources.org        # Bibliography
+├── notes/            # Detailed investigation
+└── recommendations.org
 #+END_SRC
 
-** Formal Specification Workflow
-1. Define system requirements in natural language
-2. Create TLA+ specifications for behavior
-3. Model structure and constraints in Alloy
-4. Implement with specification-guided development
-5. Verify implementation against formal models
+* Prompt Templates by Development Phase
 
-* Lessons Learned and Best Practices
+** Project Initialization
+#+BEGIN_SRC
+1. "[BASIC FUNCTIONALITY] using [TECH STACK] in [FORMAT]"
+2. "[INTERFACE] should use [PATTERN]" 
+3. "start by using [METHODOLOGY] to [ENSURE QUALITY]"
+4. "show a SETUP.org that builds out initial files"
+#+END_SRC
 
-** Successful Patterns
-*** Literate Programming Approach
-- .org files enable comprehensive project generation
-- Tangling provides clean separation of documentation and code
-- Enables rapid prototyping with complete project structure
+** Feature Development
+#+BEGIN_SRC
+1. "add a gh issue for [FEATURE] then implement"
+2. "smallest possible change to implement [REQUIREMENT]"
+3. "add [COMMAND/FUNCTION] that [BEHAVIOR]"
+4. "fix [ISSUE] with [APPROACH]"
+#+END_SRC
 
-*** Formal Methods Integration
-- Specifications before implementation prevents design errors
-- TLA+ excellent for behavior modeling
-- Alloy valuable for structural validation
-- Automated verification catches regressions
+** Quality and Testing
+#+BEGIN_SRC
+1. "gmake lint test verify"
+2. "add tests for [FUNCTIONALITY]"
+3. "create formal spec for [COMPONENT]"
+4. "run security review on [SYSTEM]"
+#+END_SRC
 
-*** Comprehensive Documentation
-- Git notes preserve prompt history without cluttering commits
-- Issue tracking provides complete change traceability
-- Research documentation enables knowledge accumulation
+** Documentation and Analysis
+#+BEGIN_SRC
+1. "/mise-en-place" - workspace organization
+2. "/self-analyze" - capability assessment  
+3. "/research [topic]" - investigate area
+4. "/security-review" - security analysis
+#+END_SRC
 
-** Methodological Innovations
-*** Documentation-Driven Development
-Every change follows the pattern:
-1. Document intent (issue or prompt)
-2. Implement minimal change
-3. Verify through testing pipeline
-4. Document results and learnings
+* Iteration and Improvement Patterns
 
-*** AI-Assisted Development with Human Oversight
-- AI provides implementation and suggestions
-- Human maintains architectural vision and quality standards
-- Formal specifications provide safety constraints
-- Comprehensive testing validates all changes
+** After Each Development Session
+1. **Document all prompts** in git notes
+2. **Update this template** with new patterns discovered
+3. **Commit template changes** with methodology notes
+4. **Prepare for next iteration** with clean starting point
 
-** Challenges and Solutions
-*** False Security Alarms
-*Problem*: Over-aggressive security analysis in development context
-*Solution*: Context-aware threat modeling and graduated response
+** Template Evolution Process
+#+BEGIN_SRC
+Session N: Use current template → Document new patterns
+Session N+1: Update template → Test improvements  
+Session N+2: Refine template → Validate methodology
+Repeat: Continuous template improvement
+#+END_SRC
 
-*** Dependency Management
-*Problem*: Shadow-CLJS dependency warnings
-*Solution*: Let build tools manage core dependencies, document explicitly
+** Methodology Metrics
+Track these metrics across iterations:
+- Time from vision to working prototype
+- Number of prompts to achieve functionality
+- Quality gate success rate
+- Template reusability across projects
 
-*** Test Environment Limitations
-*Problem*: Interactive tests failing in CI
-*Solution*: Separate unit tests from interactive tests, skip timeouts in automation
+* Anti-Patterns and Lessons Learned
 
-* Future Development Roadmap
+** Avoid These Patterns
+*** 1. Undocumented Prompts
+*Problem:* Losing reproducibility and learning
+*Solution:* Always document in git notes
 
-** Immediate Priorities (Current Sprint)
-1. *Tool Calling Framework* (Issue #54) - Foundation for self-hosting
-2. *Streaming Responses* (Issue #57) - Real-time API response display
-3. *Memory Management* (Issue #59) - Context compression and summarization
+*** 2. Monolithic Changes
+*Problem:* Hard to debug and verify
+*Solution:* "Smallest possible change" approach
 
-** Medium-term Goals (Next Quarter)
-1. *Multi-modal Capabilities* (Issue #58) - File and image processing
-2. *Security Hardening* (Issue #55) - Input sanitization and log security
-3. *Telemetry Integration* - OpenTelemetry instrumentation
+*** 3. Skipping Quality Gates
+*Problem:* Technical debt accumulation
+*Solution:* Always run lint/test/verify before commit
 
-** Long-term Vision (Self-Hosting)
-1. *File System Access* - Read and modify own source code
-2. *Dynamic Compilation* - Hot-reload self-modifications
-3. *Advanced Context Management* - Persistent conversation memory
-4. *Tool Ecosystem* - Plugin architecture for extensibility
+*** 4. Missing Issue Tracking
+*Problem:* Lost context and decision history
+*Solution:* Create issue for every change
 
-* Conclusion: A Case Study in AI-Assisted Development
+** Successful Patterns to Amplify
+*** 1. Literate Programming
+*Benefit:* Rapid, comprehensive project generation
+*Application:* Use .org files for major structure changes
 
-The Gemini REPL project represents a comprehensive case study in systematic AI-assisted software development. Key innovations include:
+*** 2. Formal Methods Integration
+*Benefit:* Safety constraints and behavior validation
+*Application:* Critical system components and APIs
 
-** Methodological Contributions
-- *Complete prompt traceability* from vision to implementation
-- *Formal methods integration* as safety constraints for AI development
-- *Literate programming* for rapid project generation
-- *Documentation-driven development* with comprehensive tracking
+*** 3. Systematic Documentation
+*Benefit:* Perfect reproducibility and knowledge transfer
+*Application:* Every prompt, decision, and outcome
 
-** Technical Achievements
-- *Working REPL* with conversation context and cost tracking
-- *Formal specifications* verified through automated pipeline
-- *Comprehensive testing* at multiple levels
-- *Production-ready build system* with quality gates
+*** 4. Issue-Driven Development
+*Benefit:* Complete traceability and context preservation
+*Application:* All changes, even trivial ones
 
-** Philosophical Insights
-- AI-assisted development benefits from human architectural oversight
-- Formal specifications provide essential safety constraints
-- Comprehensive documentation enables knowledge preservation and transfer
-- Systematic methodology scales to complex projects
+* Next Iteration Preparation
 
-This document serves as both historical record and methodological template for future AI-assisted software development projects.
+** Before Starting Next Project
+1. **Review this template** for completeness
+2. **Prepare development environment** with tools
+3. **Define success criteria** for the iteration
+4. **Set up tracking systems** (git, issues, documentation)
 
-* Appendix: Complete Prompt Index
+** Success Criteria for Template Validation
+- [ ] Can reproduce project from scratch using only this template
+- [ ] All major methodologies documented with examples  
+- [ ] Reusable patterns extracted and tested
+- [ ] Quality gates integrated and validated
+- [ ] Documentation systems functional
 
-** Setup and Infrastructure Prompts
-- Initial REPL concept definition
-- Formal methods integration decision
-- SETUP.org generation request
-- NODE-SETUP.org environment configuration
-- GITHUB-SETUP.org CI/CD setup
-- SHARED-SETUP.org project management structure
-
-** Feature Development Prompts
-- Slash command implementation requests
-- UI enhancement specifications
-- Conversation context feature requirements
-- Metadata display optimization
-- Error handling improvements
-
-** Quality and Security Prompts
-- /security-review comprehensive analysis
-- /lint-fix methodology updates
-- Issue tracking and resolution cycles
-- Testing pipeline validation
-
-** Research and Analysis Prompts
-- /self-analyze capability assessment
-- /research telemetry investigation
-- /mise-en-place workspace organization
-- Technology evaluation and selection
-
-** Documentation and Methodology Prompts
-- Git commit message formatting
-- Attribution and co-authoring patterns
-- Session prompt documentation in git notes
-- PROMPTS.org comprehensive documentation request
+** Template Improvement Areas
+*Current gaps to address in next iteration:*
+- [ ] Automated testing integration patterns
+- [ ] Deployment and distribution workflows
+- [ ] Multi-language project templates
+- [ ] Collaborative development patterns
+- [ ] Performance optimization methodologies
 
 ---
 
-*This document represents the complete archaeological record of the Gemini REPL project generation, preserving methodology and insights for future reference and replication.*
+*This template represents the distilled methodology for AI-assisted software development, designed for infinite iteration and continuous improvement.*
+
+** Meta-Learning Loop
+#+BEGIN_SRC
+Use Template → Document Discoveries → Update Template → Test Improvements → Repeat
+#+END_SRC
+
+Each iteration makes the next one more efficient and effective.
+
+** Repository Template Checklist
+When starting fresh:
+- [ ] Initialize git repository
+- [ ] Set up direnv for environment management
+- [ ] Create .env.example with all configuration options
+- [ ] Establish conventional commit patterns
+- [ ] Set up issue tracking with labels
+- [ ] Configure quality gates (lint/test/verify)
+- [ ] Document methodology in PROMPTS.org
+- [ ] Track all prompts in git notes
+
+*End of from-scratch template. Ready for infinite iteration and improvement.*
