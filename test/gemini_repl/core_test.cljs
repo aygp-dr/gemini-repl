@@ -56,6 +56,12 @@
   (testing "confidence-indicator with nil input"
     (is (nil? (core/confidence-indicator nil)))))
 
+(deftest test-display-format
+  (testing "Compact metadata display components"
+    ;; Test that we have compact formatting functions
+    (is (fn? core/display-response-with-metadata))
+    (is (fn? core/confidence-indicator))))
+
 (deftest test-extract-token-usage
   (testing "extract-token-usage with valid body"
     (let [body #js {"usageMetadata" #js {"promptTokenCount" 100

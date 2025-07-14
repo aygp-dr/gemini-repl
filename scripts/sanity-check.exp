@@ -1,0 +1,65 @@
+#!/usr/bin/env expect
+
+# Sanity check for Gemini REPL
+set timeout 10
+
+# Start the REPL
+spawn node target/repl.js
+
+# Wait for prompt
+expect "gemini> "
+
+# Test 1: Simple math
+send "2 + 2\r"
+expect {
+    "4" { puts "✓ Math test passed" }
+    timeout { puts "✗ Math test failed"; exit 1 }
+}
+expect "gemini> "
+
+# Test 2: Another math
+send "40 + 2\r"
+expect {
+    "42" { puts "✓ Math test 2 passed" }
+    timeout { puts "✗ Math test 2 failed"; exit 1 }
+}
+expect "gemini> "
+
+# Test 3: Haiku
+send "write a haiku about programming\r"
+expect {
+    "Thinking..." { puts "✓ Processing request" }
+    timeout { puts "✗ Request processing failed"; exit 1 }
+}
+
+# Wait for haiku response (looking for typical haiku patterns)
+expect {
+    -re {.*(code|bug|line|debug|compile|function|loop|byte).+\r\n.+\r\n.+} {
+        puts "✓ Haiku test passed"
+    }
+    timeout { puts "✗ Haiku test failed"; exit 1 }
+}
+expect "gemini> "
+
+# Test 4: Help command
+send "/help\r"
+expect {
+    "Commands:" { puts "✓ Help command passed" }
+    timeout { puts "✗ Help command failed"; exit 1 }
+}
+expect "gemini> "
+
+# Test 5: Stats command
+send "/stats\r"
+expect {
+    "Session Statistics:" { puts "✓ Stats command passed" }
+    timeout { puts "✗ Stats command failed"; exit 1 }
+}
+expect "gemini> "
+
+# Exit gracefully
+send "/exit\r"
+expect "Goodbye!"
+
+puts "\n✅ All sanity checks passed!"
+exit 0

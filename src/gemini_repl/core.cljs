@@ -102,17 +102,16 @@
 (defn display-response-with-metadata [text token-usage estimated-cost duration logprob]
   (println (str "\n" text))
   (when (get-env "GEMINI_SHOW_METADATA")
-    (println)
-    (println "─────────────────────────────")
-    (when token-usage
-      (when-let [indicator (confidence-indicator logprob)]
-        (print (str indicator " ")))
-      (print (str "📊 " (:total-tokens token-usage) " tokens"))
-      (when estimated-cost (print (str " | 💰 $" (.toFixed estimated-cost 6))))
-      (when duration (print (str " | ⏱️ " duration "ms")))
-      (println))
-    (let [session @session-state]
-      (println (str "Session: 📊 " (:total-tokens session) " total | 💰 $" (.toFixed (:total-cost session) 6) " total")))))
+    (let [duration-str (if (and duration (< duration 1000))
+                         (str duration "ms")
+                         (when duration (str (.toFixed (/ duration 1000) 1) "s")))]
+      (println (str "\n["
+                    (when-let [indicator (confidence-indicator logprob)]
+                      (str indicator " "))
+                    (when token-usage (str (:total-tokens token-usage) " tokens"))
+                    (when estimated-cost (str " | $" (.toFixed estimated-cost 4)))
+                    (when duration-str (str " | " duration-str))
+                    "]")))))
 
 (defn make-request [api-key prompt callback]
   (let [start-time (.now js/Date)
