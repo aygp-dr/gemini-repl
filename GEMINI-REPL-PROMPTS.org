@@ -1,0 +1,317 @@
+#+TITLE: GEMINI-REPL-PROMPTS.org - Exact Reproduction Instructions
+#+AUTHOR: jwalsh + Claude
+#+DATE: 2025-07-14
+#+STARTUP: overview
+
+* SINGLE-INPUT REPRODUCTION SYSTEM
+
+This document contains the EXACT prompts and CONTINUE control structure to reproduce the Gemini REPL repository from scratch using only this file and CONTINUE commands.
+
+** OPERATION: Start Here
+1. Give AI this file: GEMINI-REPL-PROMPTS.org
+2. Issue command: "CONTINUE"  
+3. AI executes next phase and waits
+4. Issue command: "CONTINUE"
+5. Repeat until complete
+
+** CONTINUE Control Structure
+- Each "CONTINUE" advances to next phase
+- AI must wait for explicit "CONTINUE" 
+- No auto-advancement between phases
+- Each phase ends with "READY FOR CONTINUE"
+
+* Phase 1: Foundation (Wait for CONTINUE)
+
+** Foundation Prompts (Execute in sequence)
+1. =i want to have a simple, simple console app in clojurescript that just makes calls to curl [Gemini API endpoint] but in a repl-ish format=
+2. =the exit and help commands should use a slash structure=  
+3. =i want to start by using formal methods to describe the interfaces or expectations of the system=
+
+** Repository Setup
+#+BEGIN_SRC bash
+# Create basic structure
+mkdir gemini-repl && cd gemini-repl
+git init
+echo "GEMINI_API_KEY=your-api-key-here" > .env.example
+echo ".env" > .gitignore
+#+END_SRC
+
+** Environment Setup
+#+BEGIN_SRC bash
+# Create .envrc for direnv
+echo 'if [ -f .env ]; then source .env; fi' > .envrc
+#+END_SRC
+
+**Phase 1 Complete** → READY FOR CONTINUE
+
+* Phase 2: Literate Programming Setup (Wait for CONTINUE)
+
+** SETUP.org Generation
+Prompt: =show a SETUP.org that just builds out those initial files=
+
+Expected structure:
+- =specs/= - Formal specifications (TLA+, Alloy)
+- =src/= - ClojureScript implementation  
+- =tests/= - Unit and integration tests
+- =docs/= - Documentation
+- =change-requests/= - Design documents
+- =experiments/= - Experimentation area
+- =research/= - Research documentation
+
+** Tangling Process
+1. Generate SETUP.org
+2. Extract all files from org blocks
+3. Test directory structure  
+4. Remove SETUP.org after success
+5. Commit with git notes documenting prompts
+
+**Phase 2 Complete** → READY FOR CONTINUE
+
+* Phase 3: Technology Environment (Wait for CONTINUE)
+
+** NODE-SETUP.org Generation  
+Prompt: =create NODE-SETUP.org for ClojureScript development environment=
+
+Expected outputs:
+- =package.json= with Shadow-CLJS dependencies
+- =shadow-cljs.edn= configuration
+- =src/gemini_repl/core.cljs= basic implementation
+- Development scripts in =scripts/=
+
+** Key Technology Decisions
+- **Language**: ClojureScript targeting Node.js
+- **Build**: Shadow-CLJS for compilation
+- **API**: Direct HTTPS calls to Gemini API
+- **Environment**: FreeBSD with gmake
+- **Quality**: clj-kondo for linting
+
+**Phase 3 Complete** → READY FOR CONTINUE
+
+* Phase 4: Core Implementation (Wait for CONTINUE)
+
+** Basic REPL Implementation
+Prompt: =implement the core REPL with readline interface and basic slash commands=
+
+Required features:
+- Readline interface with history
+- =/help=, =/exit=, =/clear= commands
+- HTTPS API calls to Gemini
+- JSON request/response handling
+- Basic error handling
+
+** API Integration
+#+BEGIN_SRC clojure
+;; Core API call pattern
+(defn make-request [api-key prompt callback]
+  ;; HTTPS request to generativelanguage.googleapis.com
+  ;; JSON payload with prompt
+  ;; Handle response and token usage
+  )
+#+END_SRC
+
+**Phase 4 Complete** → READY FOR CONTINUE
+
+* Phase 5: Formal Specifications (Wait for CONTINUE)
+
+** TLA+ Specifications
+Prompt: =create TLA+ specifications for the API client behavior=
+
+Required specs:
+- =api_client.tla= - Request/response state machine
+- =commands.tla= - Command parsing and validation
+- =interfaces.tla= - Component interaction contracts
+- =gemini_api.tla= - API interaction model
+
+** Alloy Models
+Prompt: =create Alloy models for structural validation=
+
+Required models:
+- =state.alloy= - System state constraints
+- =gemini_api.alloy= - API structure validation
+
+** Verification Pipeline
+#+BEGIN_SRC makefile
+verify: verify-tla verify-alloy
+verify-tla:
+	tla2sany specs/*.tla
+verify-alloy:
+	# Alloy analyzer verification
+#+END_SRC
+
+**Phase 5 Complete** → READY FOR CONTINUE
+
+* Phase 6: GitHub Integration (Wait for CONTINUE)
+
+** GITHUB-SETUP.org Generation
+Prompt: =show GITHUB-SETUP.org=
+
+Expected outputs:
+- =.github/workflows/= CI/CD pipelines
+- =.github/ISSUE_TEMPLATE/= issue templates
+- =.github/rfcs/= RFC process
+- Repository settings and labels
+
+** Issue Tracking Setup
+Create labels:
+- =enhancement=, =bug=, =documentation=
+- =formal-methods=, =validation=, =tooling=
+- =ui=, =api=, =self-hosting=
+
+**Phase 6 Complete** → READY FOR CONTINUE
+
+* Phase 7: Advanced Features (Wait for CONTINUE)
+
+** Conversation Context
+Prompt: =add conversation context to enable multi-turn dialogues=
+
+Implementation:
+- =conversation-history= atom
+- Include history in API requests
+- =/context= command for history display
+
+** Enhanced UI Features
+Prompts in sequence:
+1. =add confidence indicators based on response logprobs=
+2. =implement compact single-line metadata display=  
+3. =add ASCII art banner using toilet=
+
+** Development Infrastructure
+Prompts:
+1. =add live reload with nodemon for development mode=
+2. =create tmux development dashboard=
+3. =add comprehensive build and release system=
+
+**Phase 7 Complete** → READY FOR CONTINUE
+
+* Phase 8: Quality and Testing (Wait for CONTINUE)
+
+** Linting and Quality Gates
+Prompt: =add comprehensive linting for ClojureScript and shell scripts=
+
+Expected targets:
+#+BEGIN_SRC makefile
+lint: lint-cljs lint-shell
+test: test-cljs test-repl  
+verify: verify-tla verify-alloy
+#+END_SRC
+
+** Testing Infrastructure
+Prompts:
+1. =add ClojureScript unit tests=
+2. =create interactive REPL testing with expect=
+3. =add manual test documentation=
+
+**Phase 8 Complete** → READY FOR CONTINUE
+
+* Phase 9: Documentation and Release (Wait for CONTINUE)
+
+** Documentation System
+Prompts:
+1. =update README.org with current features and examples=
+2. =add comprehensive .env.example with all options=
+3. =create research documentation structure=
+
+** Release System
+Prompt: =create automated release system with versioning and GitHub integration=
+
+Features:
+- Semantic versioning (patch/minor/major)
+- Release archive generation
+- GitHub release creation
+- Release notes from git history
+
+**Phase 9 Complete** → READY FOR CONTINUE
+
+* Phase 10: Self-Hosting Preparation (Wait for CONTINUE)
+
+** Command System
+Prompt: =add .claude/commands/ system for AI assistant integration=
+
+Commands to implement:
+- =mise-en-place.md=
+- =self-analyze.md=
+- =research.md=
+- =security-review.md=
+
+** Research Framework
+Prompt: =create research documentation system in research/=
+
+Structure:
+#+BEGIN_SRC
+research/[topic]/
+├── README.org
+├── sources.org  
+└── findings.org
+#+END_SRC
+
+**Phase 10 Complete** → READY FOR CONTINUE
+
+* Phase 11: Final Integration (Wait for CONTINUE)
+
+** Security Review
+Prompt: =/security-review=
+
+Address findings:
+- Log sanitization for API keys
+- Input validation for prompts
+- File permissions for sensitive data
+
+** Template Documentation
+Prompts:
+1. =create comprehensive PROMPTS.org documenting methodology=
+2. =validate template against actual implementation=
+3. =add template enhancement tracking=
+
+**Phase 11 Complete** → PROJECT REPRODUCTION COMPLETE
+
+* VERIFICATION CHECKLIST
+
+After all phases complete, verify:
+- [ ] =gmake lint= passes (0 warnings)
+- [ ] =gmake test= passes (all tests) 
+- [ ] =gmake verify= passes (formal specs)
+- [ ] =gmake run= starts functional REPL
+- [ ] All slash commands work (=/help=, =/stats=, =/context=)
+- [ ] Conversation context maintained
+- [ ] API integration functional
+- [ ] GitHub integration complete
+- [ ] Documentation comprehensive
+
+* EXPECTED FINAL STRUCTURE
+
+#+BEGIN_SRC
+gemini-repl/
+├── CLAUDE.md
+├── GEMINI-REPL-PROMPTS.org (this file)
+├── LICENSE  
+├── Makefile
+├── README.org
+├── change-requests/
+├── docs/
+├── experiments/
+├── research/
+│   └── telemetry/
+├── scripts/
+├── specs/
+│   ├── *.tla (TLA+ specifications)
+│   └── *.alloy (Alloy models)
+├── src/
+│   └── gemini_repl/
+│       └── core.cljs
+├── test/
+└── tools/
+    └── formal-methods/
+#+END_SRC
+
+* OPERATION SUMMARY
+
+**Single Input**: This file (GEMINI-REPL-PROMPTS.org)
+**Control**: CONTINUE commands advance phases
+**Output**: Complete Gemini REPL repository reproduction
+**Verification**: Quality gates confirm successful reproduction
+
+**Total CONTINUE Commands**: 11 (one per phase)
+**Expected Duration**: 2-4 hours depending on AI speed
+**Success Criteria**: Functional REPL matching original repository
+
+**START COMMAND**: CONTINUE
