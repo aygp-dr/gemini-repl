@@ -25,3 +25,6 @@ gemini-repl-*.tar.gz
 # Session data (keep templates, ignore actual data)
 .ai/sessions/
 .ai/context/CLAUDE-context.md
+
+# Emacs project config
+gemini-repl.el

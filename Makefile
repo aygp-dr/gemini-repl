@@ -1,6 +1,10 @@
 # Gemini REPL Makefile
 # For FreeBSD, use gmake
 
+# Project configuration
+PROJECT_NAME := gemini-repl
+PROJECT_ROOT := $(shell pwd)
+
 # Tool versions
 TLA_VERSION := 1.8.0
 ALLOY_VERSION := 5.1.0
@@ -11,7 +15,7 @@ TLA_JAR := $(TOOLS_DIR)/tla2tools.jar
 ALLOY_JAR := $(TOOLS_DIR)/alloy.jar
 
 # Phony targets
-.PHONY: help all install verify run dev build clean test test-repl test-cljs spec-check verify-alloy verify-tla banner lint lint-cljs lint-shell install-lint-tools check-lint-tools release release-patch release-minor release-major
+.PHONY: help all install verify run dev build clean test test-repl test-cljs spec-check verify-alloy verify-tla banner lint lint-cljs lint-shell install-lint-tools check-lint-tools release release-patch release-minor release-major emacs emacs-restart
 
 # Default target
 all: help
@@ -37,6 +41,8 @@ help:
 	@echo "  gmake lint-shell    - Lint shell scripts"
 	@echo "  gmake clean         - Clean build artifacts"
 	@echo "  gmake dashboard     - Start tmux development dashboard"
+	@echo "  gmake emacs         - Start Emacs in tmux for Clojure development"
+	@echo "  gmake emacs-restart - Restart Emacs tmux session"
 	@echo "  gmake release       - Create a new patch release"
 	@echo "  gmake release-minor - Create a new minor release"
 	@echo "  gmake release-major - Create a new major release"
@@ -117,6 +123,74 @@ dashboard:
 # Restart dashboard
 dashboard-restart:
 	./scripts/tmux-dashboard.sh --restart
+
+# Start Emacs in tmux for Clojure development
+emacs:
+	@echo "🚀 Starting Emacs environment for $(PROJECT_NAME)..."
+	@# Create Emacs config if it doesn't exist
+	@if [ ! -f $(PROJECT_NAME).el ]; then \
+		echo "Creating $(PROJECT_NAME).el configuration..."; \
+		echo ";; $(PROJECT_NAME) Emacs configuration" > $(PROJECT_NAME).el; \
+		echo "(setq project-name \"$(PROJECT_NAME)\")" >> $(PROJECT_NAME).el; \
+		echo "(setq project-root \"$(PROJECT_ROOT)\")" >> $(PROJECT_NAME).el; \
+		echo "" >> $(PROJECT_NAME).el; \
+		echo ";; Package setup" >> $(PROJECT_NAME).el; \
+		echo "(require 'package)" >> $(PROJECT_NAME).el; \
+		echo "(add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)" >> $(PROJECT_NAME).el; \
+		echo "(package-initialize)" >> $(PROJECT_NAME).el; \
+		echo "" >> $(PROJECT_NAME).el; \
+		echo ";; Install required packages if not present" >> $(PROJECT_NAME).el; \
+		echo "(dolist (package '(cider clojure-mode paredit org))" >> $(PROJECT_NAME).el; \
+		echo "  (unless (package-installed-p package)" >> $(PROJECT_NAME).el; \
+		echo "    (package-refresh-contents)" >> $(PROJECT_NAME).el; \
+		echo "    (package-install package)))" >> $(PROJECT_NAME).el; \
+		echo "" >> $(PROJECT_NAME).el; \
+		echo ";; Clojure setup" >> $(PROJECT_NAME).el; \
+		echo "(add-hook 'clojure-mode-hook #'paredit-mode)" >> $(PROJECT_NAME).el; \
+		echo "(add-hook 'cider-repl-mode-hook #'paredit-mode)" >> $(PROJECT_NAME).el; \
+		echo "" >> $(PROJECT_NAME).el; \
+		echo ";; CIDER configuration" >> $(PROJECT_NAME).el; \
+		echo "(setq cider-cljs-lein-repl" >> $(PROJECT_NAME).el; \
+		echo "      \"(do (require 'shadow.cljs.devtools.api)" >> $(PROJECT_NAME).el; \
+		echo "           (shadow.cljs.devtools.api/nrepl-select :repl))\")" >> $(PROJECT_NAME).el; \
+		echo "" >> $(PROJECT_NAME).el; \
+		echo ";; Start in project root" >> $(PROJECT_NAME).el; \
+		echo "(cd project-root)" >> $(PROJECT_NAME).el; \
+		echo "" >> $(PROJECT_NAME).el; \
+		echo ";; Display startup message" >> $(PROJECT_NAME).el; \
+		echo "(message \"$(PROJECT_NAME) environment loaded. Use M-x cider-jack-in-cljs to start REPL\")" >> $(PROJECT_NAME).el; \
+	fi
+	@# Check if tmux session exists
+	@if tmux has-session -t $(PROJECT_NAME) 2>/dev/null; then \
+		echo "⚠️  Tmux session '$(PROJECT_NAME)' already exists"; \
+		echo "   Attaching to existing session..."; \
+		tmux attach-session -t $(PROJECT_NAME); \
+	else \
+		echo "📺 Starting tmux session '$(PROJECT_NAME)' with Emacs..."; \
+		tmux new-session -d -s $(PROJECT_NAME) "emacs -nw -Q -l $(PROJECT_NAME).el"; \
+		echo "📍 TTY: $$(tmux list-panes -t $(PROJECT_NAME) -F '#{pane_tty}')"; \
+		echo ""; \
+		echo "✅ Emacs started in tmux session '$(PROJECT_NAME)'"; \
+		echo ""; \
+		echo "📋 Quick commands:"; \
+		echo "  Attach:  tmux attach -t $(PROJECT_NAME)"; \
+		echo "  Detach:  C-b d"; \
+		echo "  Kill:    tmux kill-session -t $(PROJECT_NAME)"; \
+		echo ""; \
+		echo "🔧 Emacs Clojure commands:"; \
+		echo "  M-x cider-jack-in-cljs    - Start ClojureScript REPL"; \
+		echo "  C-c C-e                   - Evaluate expression"; \
+		echo "  C-c C-k                   - Load current buffer"; \
+		echo "  C-c C-z                   - Switch to REPL"; \
+		echo ""; \
+		tmux attach-session -t $(PROJECT_NAME); \
+	fi
+
+# Restart Emacs tmux session
+emacs-restart:
+	@echo "🔄 Restarting Emacs session for $(PROJECT_NAME)..."
+	@tmux kill-session -t $(PROJECT_NAME) 2>/dev/null || true
+	@$(MAKE) emacs
 
 # Development mode with live reload
 dev: install
