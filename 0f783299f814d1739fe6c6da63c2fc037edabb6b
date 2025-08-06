@@ -1,0 +1,27 @@
+Context: User requested tmux/Emacs integration for Clojure development
+
+Request: Add project name/root environment variables and tmux session with Emacs configured for CIDER, clojure-mode, org-mode, tramp, and paredit
+
+Implementation:
+- Added PROJECT_NAME and PROJECT_ROOT exports to .envrc for direnv users
+- Added same variables to Makefile for non-direnv environments
+- Created make emacs target that:
+  * Generates project-specific Emacs config on first run
+  * Configures MELPA, CIDER, paredit, and ClojureScript support
+  * Starts named tmux session with project name
+  * Shows TTY for debugging/automation
+  * Provides helpful command reference
+- Added make emacs-restart for quick session cycling
+- Added generated .el file to .gitignore
+
+Considerations:
+- Used -Q flag with explicit config loading for clean Emacs environment
+- Shadow-CLJS integration configured for ClojureScript REPL
+- Paredit auto-enabled for structural editing
+- Project root automatically set as working directory
+- Reusable session management with attach/restart logic
+
+Issues encountered:
+- Minor bash permission warning on commit (non-blocking)
+
+Timing: ~5 minutes for implementation and testing
