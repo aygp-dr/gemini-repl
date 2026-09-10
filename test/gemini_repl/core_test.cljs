@@ -1,6 +1,11 @@
 (ns gemini-repl.core-test
-  (:require [cljs.test :refer-macros [deftest testing is]]
+  (:require [cljs.test :refer-macros [deftest testing is use-fixtures]]
+            [clojure.spec.test.alpha :as stest]
             [gemini-repl.core :as core]))
+
+;; Exercise every s/fdef :args spec while the unit tests run.
+(use-fixtures :once
+  (fn [f] (stest/instrument) (try (f) (finally (stest/unstrument)))))
 
 (deftest test-get-log-level
   (testing "get-log-level returns a valid log level"
