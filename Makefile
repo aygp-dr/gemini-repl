@@ -209,12 +209,7 @@ build:
 # ClojureScript unit tests
 test-cljs:
 	@echo "=== Running ClojureScript tests ==="
-	@if command -v npx >/dev/null 2>&1; then \
-		npx shadow-cljs compile test && node target/test.js; \
-	else \
-		echo "Error: npx not found"; \
-		exit 1; \
-	fi
+	bb test
 
 # Run all tests
 test: test-cljs test-repl
@@ -269,12 +264,7 @@ lint: lint-cljs lint-shell
 # ClojureScript linting
 lint-cljs:
 	@echo "=== Linting ClojureScript files ==="
-	@if command -v clj-kondo >/dev/null 2>&1; then \
-		clj-kondo --lint src/ test/ --config '{:output {:format :text}}' --fail-level error; \
-	else \
-		echo "Warning: clj-kondo not found. Skipping ClojureScript linting."; \
-		echo "Install clj-kondo: https://github.com/clj-kondo/clj-kondo/blob/master/doc/install.md"; \
-	fi
+	bb lint
 
 # Shell script linting
 lint-shell:
