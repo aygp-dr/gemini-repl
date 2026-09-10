@@ -61,11 +61,11 @@
 
 (defn create-interface []
   (.createInterface readline
-    #js {:input (.-stdin process)
-         :output (.-stdout process)
-         :prompt "gemini> "
-         :terminal true
-         :historySize 100}))
+                    #js {:input (.-stdin process)
+                         :output (.-stdout process)
+                         :prompt "gemini> "
+                         :terminal true
+                         :historySize 100}))
 
 (defn extract-token-usage [body]
   (try
@@ -123,13 +123,13 @@
 
 (defn make-request [api-key prompt callback]
   ;; Add user message to history
-  (swap! conversation-history conj 
-         #js {:role "user" 
+  (swap! conversation-history conj
+         #js {:role "user"
               :parts #js [#js {:text prompt}]})
-  
+
   (let [start-time (.now js/Date)
         data (.stringify js/JSON
-               #js {:contents (clj->js @conversation-history)})
+                         #js {:contents (clj->js @conversation-history)})
         options #js {:hostname "generativelanguage.googleapis.com"
                      :port 443
                      :path "/v1beta/models/gemini-2.0-flash:generateContent"
@@ -137,86 +137,86 @@
                      :headers #js {"x-goog-api-key" api-key
                                    "Content-Type" "application/json"
                                    "Content-Length" (.-length data)}}]
-    
+
     ;; Log basic request
     (log-entry {:timestamp (.toISOString (js/Date.))
                 :type "request"
                 :level "info"
                 :prompt prompt})
-    
+
     ;; Log debug request with full details
     (log-entry {:timestamp (.toISOString (js/Date.))
                 :type "request_debug"
                 :level "debug"
                 :request {:url (str "https://" (.-hostname options) (.-path options))
-                         :method (.-method options)
-                         :headers (js->clj (.-headers options))
-                         :body (js->clj (.parse js/JSON data))
-                         :timing {:start start-time}}
+                          :method (.-method options)
+                          :headers (js->clj (.-headers options))
+                          :body (js->clj (.parse js/JSON data))
+                          :timing {:start start-time}}
                 :prompt prompt})
-    
+
     (let [req (.request https options
-                (fn [^js res]
-                  (let [chunks (atom [])]
-                    (.on res "data" (fn [chunk] (swap! chunks conj chunk)))
-                    (.on res "end"
-                         (fn []
-                           (let [end-time (.now js/Date)
-                                 duration (- end-time start-time)]
-                             (try
-                              (let [body (.parse js/JSON (.concat js/Buffer (clj->js @chunks)))
-                                    text (-> body
-                                             (aget "candidates")
-                                             (aget 0)
-                                             (aget "content")
-                                             (aget "parts")
-                                             (aget 0)
-                                             (aget "text"))
-                                    token-usage (extract-token-usage body)
-                                    estimated-cost (calculate-estimated-cost token-usage)
-                                    logprob (try
-                                              (-> body
-                                                  (aget "candidates")
-                                                  (aget 0)
-                                                  (aget "avgLogprobs"))
-                                              (catch js/Error _e nil))]
-                                
+                        (fn [^js res]
+                          (let [chunks (atom [])]
+                            (.on res "data" (fn [chunk] (swap! chunks conj chunk)))
+                            (.on res "end"
+                                 (fn []
+                                   (let [end-time (.now js/Date)
+                                         duration (- end-time start-time)]
+                                     (try
+                                       (let [body (.parse js/JSON (.concat js/Buffer (clj->js @chunks)))
+                                             text (-> body
+                                                      (aget "candidates")
+                                                      (aget 0)
+                                                      (aget "content")
+                                                      (aget "parts")
+                                                      (aget 0)
+                                                      (aget "text"))
+                                             token-usage (extract-token-usage body)
+                                             estimated-cost (calculate-estimated-cost token-usage)
+                                             logprob (try
+                                                       (-> body
+                                                           (aget "candidates")
+                                                           (aget 0)
+                                                           (aget "avgLogprobs"))
+                                                       (catch js/Error _e nil))]
+
                                 ;; Update session state
-                                (update-session-usage token-usage estimated-cost)
-                                
+                                         (update-session-usage token-usage estimated-cost)
+
                                 ;; Log basic response
-                                (log-entry {:timestamp (.toISOString (js/Date.))
-                                            :type "response"
-                                            :level "info"
-                                            :response text})
-                                
+                                         (log-entry {:timestamp (.toISOString (js/Date.))
+                                                     :type "response"
+                                                     :level "info"
+                                                     :response text})
+
                                 ;; Log debug response with full details
-                                (log-entry {:timestamp (.toISOString (js/Date.))
-                                            :type "response_debug"
-                                            :level "debug"
-                                            :request {:prompt prompt}
-                                            :response {:status (.-statusCode res)
-                                                      :headers (js->clj (.-headers res))
-                                                      :body (js->clj body)
-                                                      :text text
-                                                      :timing {:end end-time
-                                                              :duration-ms duration}}
-                                            :usage token-usage
-                                            :estimated-cost-usd estimated-cost
-                                            :session @session-state})
-                                
+                                         (log-entry {:timestamp (.toISOString (js/Date.))
+                                                     :type "response_debug"
+                                                     :level "debug"
+                                                     :request {:prompt prompt}
+                                                     :response {:status (.-statusCode res)
+                                                                :headers (js->clj (.-headers res))
+                                                                :body (js->clj body)
+                                                                :text text
+                                                                :timing {:end end-time
+                                                                         :duration-ms duration}}
+                                                     :usage token-usage
+                                                     :estimated-cost-usd estimated-cost
+                                                     :session @session-state})
+
                                 ;; Add assistant response to history
-                                (swap! conversation-history conj
-                                       #js {:role "model"
-                                            :parts #js [#js {:text text}]})
-                                
-                                (callback nil {:text text
-                                              :token-usage token-usage
-                                              :estimated-cost estimated-cost
-                                              :duration duration
-                                              :logprob logprob}))
-                              (catch js/Error e
-                                (callback e nil)))))))))]
+                                         (swap! conversation-history conj
+                                                #js {:role "model"
+                                                     :parts #js [#js {:text text}]})
+
+                                         (callback nil {:text text
+                                                        :token-usage token-usage
+                                                        :estimated-cost estimated-cost
+                                                        :duration duration
+                                                        :logprob logprob}))
+                                       (catch js/Error e
+                                         (callback e nil)))))))))]
       (.on req "error" (fn [err] (callback err nil)))
       (.write req data)
       (.end req))))
@@ -271,21 +271,21 @@
       :else (do
               (println "\nThinking...")
               (make-request api-key trimmed
-                (fn [err result]
-                  (if err
-                    (println "Error:" (.-message err))
-                    (if (string? result)
+                            (fn [err result]
+                              (if err
+                                (println "Error:" (.-message err))
+                                (if (string? result)
                       ;; Handle legacy string result
-                      (println (str "\n" result "\n"))
+                                  (println (str "\n" result "\n"))
                       ;; Handle new metadata result
-                      (display-response-with-metadata 
-                        (:text result)
-                        (:token-usage result)
-                        (:estimated-cost result)
-                        (:duration result)
-                        (:logprob result))))
-                  (println)
-                  (.prompt rl)))))))
+                                  (display-response-with-metadata
+                                   (:text result)
+                                   (:token-usage result)
+                                   (:estimated-cost result)
+                                   (:duration result)
+                                   (:logprob result))))
+                              (println)
+                              (.prompt rl)))))))
 
 (defn show-banner []
   (if (.existsSync fs "resources/repl-banner.txt")
