@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# least privilege for GITHUB_TOKEN (L7 C1)
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: DeLaGuardo/setup-clojure@6d46099eae24853c33c0482f2bb54edf4f1a4c74 # 13.7.0
+        with:
+          cli: latest
+          bb: latest
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+          key: cljs-${{ runner.os }}-${{ hashFiles('deps.edn', 'bb.edn', 'shadow-cljs.edn', 'package-lock.json') }}
+          restore-keys: cljs-${{ runner.os }}-
+      - run: npm ci --ignore-scripts
+      - run: bb check
+      # kept from the old clojurescript-ci.yml: prove the advanced build compiles
+      - run: npx shadow-cljs release repl

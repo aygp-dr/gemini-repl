@@ -129,6 +129,29 @@ gmake release-minor # Create a new minor release
 gmake release-major # Create a new major release
 #+END_SRC
 
+** Development
+
+This repo follows the aygp-dr Clojure standard: =deps.edn= is the canonical
+manifest (=shadow-cljs.edn= uses ={:deps {:aliases [:cljs :dev]}}=) and
+=bb.edn= provides the tasks. Run =npm ci --ignore-scripts= once first.
+
+| Task                    | What it does                                           |
+|-------------------------+--------------------------------------------------------|
+| =bb test=               | =npx shadow-cljs compile test && node target/test.js=  |
+| =bb lint=               | clj-kondo (fails on errors)                            |
+| =bb fmt= / =bb fmt:fix= | cljfmt check / fix                                     |
+| =bb check=              | lint + fmt + test (CI runs this)                       |
+
+*** Specs
+
+Data specs live in =src/gemini_repl/specs.cljs=, and each public fn in
+=gemini-repl.core= has an =s/fdef= right after its =defn= (see the
+[[https://clojure.org/guides/spec][clojure.spec guide]]).
+=test/gemini_repl/specs_test.cljs= runs =stest/check= over every pure fn and
+property-tests the session-usage state transition; no test calls the Gemini
+API. The unit tests run with instrumentation on; at the shadow-cljs REPL,
+=(require 'user)= instruments too.
+
 ** Configuration
 
 Set these environment variables to customize behavior:

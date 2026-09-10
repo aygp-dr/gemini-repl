@@ -1,17 +1,18 @@
-{:source-paths ["src" "test"]
+;; Classpath and dependencies come from deps.edn (:cljs + :dev aliases).
+{:deps {:aliases [:cljs :dev]}
  :builds
  {:repl
   {:target :node-script
    :output-to "target/repl.js"
    :main gemini-repl.core/main
    :devtools {:repl-init-ns gemini-repl.core}}
-  
+
   :release
   {:target :node-script
    :output-to "dist/gemini-repl.js"
    :main gemini-repl.core/main
    :compiler-options {:optimizations :advanced}}
-  
+
   :test
   {:target :node-test
    :output-to "target/test.js"

@@ -1,6 +1,11 @@
 (ns gemini-repl.core-test
-  (:require [cljs.test :refer-macros [deftest testing is]]
+  (:require [cljs.test :refer-macros [deftest testing is use-fixtures]]
+            [clojure.spec.test.alpha :as stest]
             [gemini-repl.core :as core]))
+
+;; Exercise every s/fdef :args spec while the unit tests run.
+(use-fixtures :once
+  (fn [f] (stest/instrument) (try (f) (finally (stest/unstrument)))))
 
 (deftest test-get-log-level
   (testing "get-log-level returns a valid log level"
@@ -14,12 +19,12 @@
     (with-redefs [core/get-log-level (constantly "debug")]
       (is (true? (core/should-log-level? "debug")))
       (is (true? (core/should-log-level? "info")))))
-  
+
   (testing "should-log-level? with info level"
     (with-redefs [core/get-log-level (constantly "info")]
       (is (false? (core/should-log-level? "debug")))
       (is (true? (core/should-log-level? "info")))))
-  
+
   (testing "should-log-level? with unrecognized level"
     (with-redefs [core/get-log-level (constantly "error")]
       (is (false? (core/should-log-level? "debug")))
@@ -33,10 +38,10 @@
           result (core/calculate-estimated-cost token-usage)]
       (is (number? result))
       (is (> result 0))))
-  
+
   (testing "calculate-estimated-cost with nil input"
     (is (nil? (core/calculate-estimated-cost nil))))
-  
+
   (testing "calculate-estimated-cost with missing tokens"
     (let [token-usage {:total-tokens 100}
           result (core/calculate-estimated-cost token-usage)]
@@ -46,13 +51,13 @@
 (deftest test-confidence-indicator
   (testing "confidence-indicator with high confidence"
     (is (= "🟢" (core/confidence-indicator -0.01))))  ; ~99% confidence
-  
-  (testing "confidence-indicator with medium confidence"  
+
+  (testing "confidence-indicator with medium confidence"
     (is (= "🟡" (core/confidence-indicator -0.2))))   ; ~82% confidence
-  
+
   (testing "confidence-indicator with low confidence"
     (is (= "🔴" (core/confidence-indicator -1.0))))   ; ~37% confidence
-  
+
   (testing "confidence-indicator with nil input"
     (is (nil? (core/confidence-indicator nil)))))
 
@@ -72,11 +77,11 @@
       (is (= 100 (:prompt-tokens result)))
       (is (= 50 (:candidates-tokens result)))
       (is (= 150 (:total-tokens result)))))
-  
+
   (testing "extract-token-usage with missing metadata"
     (let [body #js {}
           result (core/extract-token-usage body)]
       (is (nil? result))))
-  
+
   (testing "extract-token-usage with nil body"
     (is (nil? (core/extract-token-usage nil)))))

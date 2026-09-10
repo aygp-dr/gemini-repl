@@ -7,10 +7,14 @@ node_modules/
 target/
 *.log
 .lsp/
-.clj-kondo/
+.clj-kondo/.cache/
 .cpcache/
 tools/
 .shadow-cljs/
+# clojure standard v1
+.nrepl-port
+.rebel_readline_history
+out/
 
 # Build artifacts
 dist/
